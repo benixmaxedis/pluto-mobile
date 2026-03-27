@@ -115,6 +115,9 @@ export const EventType = {
   GUIDE_ITEM_CREATED: 'guide_item_created',
   STRATEGY_CREATED: 'strategy_created',
   JOURNAL_COMPLETED: 'journal_completed',
+  MOMENTUM_CHAIN_CREATED: 'momentum_chain_created',
+  MOMENTUM_CHAIN_UPDATED: 'momentum_chain_updated',
+  MOMENTUM_CHAIN_SUGGESTED_BY_PLUTO: 'momentum_chain_suggested_by_pluto',
 } as const;
 export type EventType = (typeof EventType)[keyof typeof EventType];
 
@@ -127,8 +130,44 @@ export const EntityType = {
   GUIDE_ITEM: 'guide_item',
   STRATEGY: 'strategy',
   JOURNAL: 'journal',
+  MOMENTUM_CHAIN: 'momentum_chain',
 } as const;
 export type EntityType = (typeof EntityType)[keyof typeof EntityType];
+
+// ── Momentum chain domains ───────────────────────────────
+
+export const ChainDomain = {
+  SLEEP: 'sleep',
+  NUTRITION: 'nutrition',
+  EXERCISE: 'exercise',
+} as const;
+export type ChainDomain = (typeof ChainDomain)[keyof typeof ChainDomain];
+
+// ── Chain step types ─────────────────────────────────────
+
+export const ChainStepType = {
+  SETUP: 'setup',
+  EXECUTION: 'execution',
+  WIND_DOWN: 'wind_down',
+} as const;
+export type ChainStepType = (typeof ChainStepType)[keyof typeof ChainStepType];
+
+// ── Action kind ──────────────────────────────────────────
+
+export const ActionKind = {
+  NORMAL: 'normal',
+  CHAIN_GENERATED: 'chain_generated',
+} as const;
+export type ActionKind = (typeof ActionKind)[keyof typeof ActionKind];
+
+// ── Chain created by ─────────────────────────────────────
+
+export const ChainCreatedBy = {
+  USER: 'user',
+  SYSTEM: 'system',
+  PLUTO: 'pluto',
+} as const;
+export type ChainCreatedBy = (typeof ChainCreatedBy)[keyof typeof ChainCreatedBy];
 
 // ── Journal types ────────────────────────────────────────
 

@@ -44,11 +44,21 @@ SQLite is the primary data source for all UI rendering. Data syncs to Neon Postg
 The app is queue-driven, not list-driven. A deterministic queue powers the Now page focus card.
 
 **Queue priority order:**
-1. Overdue high-priority actions
+1. Overdue actions (high priority first)
 2. High-priority actions for current session
-3. Overdue normal-priority actions
-4. Routine instances for current session
-5. Normal-priority actions for current session
+3. Chain-generated setup steps for current session
+4. Scheduled actions for current session
+5. Routine instances for current session
+6. Optional pulled-forward items
+
+### Momentum Chains
+
+Momentum Chains are lightweight step sequences that reduce friction for key outcomes: **sleep**, **nutrition**, and **exercise**. Instead of treating these as standalone habits, Pluto surfaces small preparation steps (pack gym bag, prep food, start wind-down) through the existing queue.
+
+- Only the next relevant step is surfaced — no flooding
+- Chain steps appear as normal actions in the queue
+- Steps are sequenced: completing one makes the next eligible
+- Chains are optional, few in number, and easy to enable/disable
 
 ### Sessions (not exact times)
 
@@ -85,6 +95,7 @@ src/
 │   ├── capture/
 │   ├── guide/
 │   ├── activity/
+│   ├── momentum-chains/ # engine/ (step-generator)
 │   ├── pluto/
 │   ├── auth/
 │   └── onboarding/
@@ -102,9 +113,9 @@ src/
 
 ## Data Model
 
-14 SQLite tables via Drizzle ORM:
+16 SQLite tables via Drizzle ORM:
 
-- **actions** / **action_subtasks** — Completable tasks with scheduling, priority, carry-forward
+- **actions** / **action_subtasks** — Completable tasks with scheduling, priority, carry-forward, chain linkage
 - **routine_templates** / **routine_subtasks** — Recurring patterns with recurrence rules
 - **routine_instances** / **routine_instance_subtasks** — Generated occurrences (14-30 day window)
 - **open_loops** — Ultra-fast thought capture, convertible to other entities
@@ -113,6 +124,7 @@ src/
 - **journal_entries** — 5 Minute Journal (morning/evening)
 - **activity_events** — Append-only event log for all state transitions
 - **chat_messages** — Pluto AI conversation history
+- **momentum_chains** / **momentum_chain_steps** — Lightweight step sequences for sleep, nutrition, exercise
 - **app_preferences** — User settings
 
 ## Key Behaviors

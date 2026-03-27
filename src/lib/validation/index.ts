@@ -10,3 +10,5 @@ export { StrategySchema } from './strategy';
 export type { StrategyFormData } from './strategy';
 export { MorningJournalSchema, EveningJournalSchema } from './journal';
 export type { MorningJournalFormData, EveningJournalFormData } from './journal';
+export { MomentumChainSchema, MomentumChainStepSchema } from './momentum-chain';
+export type { MomentumChainFormData, MomentumChainStepFormData } from './momentum-chain';

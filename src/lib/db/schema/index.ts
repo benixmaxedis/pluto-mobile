@@ -12,3 +12,4 @@ export { journalEntries } from './journal';
 export { activityEvents } from './activity-events';
 export { chatMessages } from './chat';
 export { appPreferences } from './preferences';
+export { momentumChains, momentumChainSteps } from './momentum-chains';

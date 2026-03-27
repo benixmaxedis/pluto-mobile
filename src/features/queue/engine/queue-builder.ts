@@ -11,8 +11,25 @@ export interface QueueItem {
   carryForwardCount: number;
   sortOrder: number;
   createdAt: string;
+  actionKind?: 'normal' | 'chain_generated';
 }
 
+/**
+ * Builds the deterministic queue for the Now page.
+ *
+ * Priority order:
+ * 1. Overdue actions (high priority first)
+ * 2. High-priority actions for current session
+ * 3. Chain-generated setup steps for current session
+ * 4. Scheduled actions for current session
+ * 5. Routine instances for current session
+ * 6. Optional pulled-forward items
+ *
+ * Chain-generated steps are elevated above normal scheduled actions
+ * because they reduce friction for important outcomes (sleep, nutrition, exercise).
+ * Only the next relevant step per chain should be in the input — the step
+ * generator handles sequencing.
+ */
 export function buildQueue(
   date: string,
   session: Session,
@@ -43,21 +60,26 @@ export function buildQueue(
 function getItemScore(item: QueueItem, currentSession: Session): number {
   const isHighPriority = item.priority === 'high';
   const isCurrentSession = item.session === currentSession || item.session === null;
+  const isChainGenerated = item.actionKind === 'chain_generated';
 
   // 1. Overdue high-priority actions
-  if (item.isOverdue && isHighPriority && item.type === 'action') return 100;
+  if (item.isOverdue && isHighPriority && item.type === 'action') return 120;
 
-  // 2. High-priority actions for current session
+  // 2. Overdue normal-priority actions
+  if (item.isOverdue && item.type === 'action') return 100;
+
+  // 3. High-priority actions for current session
   if (isHighPriority && isCurrentSession && item.type === 'action') return 80;
 
-  // 3. Overdue normal-priority actions
-  if (item.isOverdue && item.type === 'action') return 60;
+  // 4. Chain-generated setup steps for current session
+  if (isChainGenerated && isCurrentSession && item.type === 'action') return 65;
 
-  // 4. Routine instances for current session
-  if (item.type === 'routine_instance' && isCurrentSession) return 40;
+  // 5. Normal-priority scheduled actions for current session
+  if (item.type === 'action' && isCurrentSession && !isChainGenerated) return 40;
 
-  // 5. Normal-priority actions for current session
-  if (item.type === 'action' && isCurrentSession) return 20;
+  // 6. Routine instances for current session
+  if (item.type === 'routine_instance' && isCurrentSession) return 20;
 
+  // Everything else (wrong session, etc.)
   return 0;
 }
