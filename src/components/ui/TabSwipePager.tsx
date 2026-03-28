@@ -1,5 +1,5 @@
-import { Children, useRef, useEffect, type ReactNode } from 'react';
-import { View, Platform, type StyleProp, type ViewStyle } from 'react-native';
+import { useRef, useEffect, type ReactNode } from 'react';
+import { type StyleProp, type ViewStyle } from 'react-native';
 import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 
 export type TabSwipePagerProps = {
@@ -11,7 +11,7 @@ export type TabSwipePagerProps = {
 
 /**
  * Horizontal swipe between tab pages, kept in sync with SegmentedControl.
- * On web, only the active page mounts (no swipe; tabs still work).
+ * Web implementation lives in TabSwipePager.web.tsx (avoids native pager import).
  */
 export function TabSwipePager({
   selectedIndex,
@@ -36,11 +36,6 @@ export function TabSwipePager({
       onIndexChange(pos);
     }
   };
-
-  if (Platform.OS === 'web') {
-    const pages = Children.toArray(children);
-    return <View style={[{ flex: 1 }, style]}>{pages[selectedIndex] ?? null}</View>;
-  }
 
   return (
     <PagerView
