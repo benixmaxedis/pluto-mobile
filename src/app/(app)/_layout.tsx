@@ -1,5 +1,4 @@
 import { Tabs } from 'expo-router';
-import { colors } from '@/lib/theme';
 import { FloatingTabBar } from '@/components/ui/FloatingTabBar';
 
 export default function AppLayout() {
@@ -10,12 +9,14 @@ export default function AppLayout() {
         headerShown: false,
       }}
     >
+      <Tabs.Screen name="today" options={{ title: 'Today' }} />
       <Tabs.Screen name="actions" options={{ title: 'Actions' }} />
-      <Tabs.Screen name="routines" options={{ title: 'Routines' }} />
-      <Tabs.Screen name="now" options={{ title: 'Now' }} />
-      <Tabs.Screen name="capture" options={{ title: 'Capture' }} />
-      <Tabs.Screen name="guide" options={{ title: 'Guide' }} />
+      <Tabs.Screen name="reflect" options={{ title: 'Reflect' }} />
       {/* Secondary routes — hidden from tab bar */}
+      <Tabs.Screen name="now" options={{ href: null }} />
+      <Tabs.Screen name="routines" options={{ href: null }} />
+      <Tabs.Screen name="capture" options={{ href: null }} />
+      <Tabs.Screen name="guide" options={{ href: null }} />
       <Tabs.Screen name="activity" options={{ href: null }} />
       <Tabs.Screen name="pluto" options={{ href: null }} />
       <Tabs.Screen name="account" options={{ href: null }} />
