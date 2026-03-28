@@ -1,9 +1,28 @@
-import type { InferSelectModel } from 'drizzle-orm';
-import type { momentumChains, momentumChainSteps } from '@/lib/db/schema';
+export type MomentumChain = {
+  id: string;
+  userId: string | null;
+  name: string;
+  domain: string;
+  description: string | null;
+  isActive: boolean | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  syncStatus: string | null;
+  syncVersion: number | null;
+  deletedAt: string | null;
+};
 
-export type MomentumChain = InferSelectModel<typeof momentumChains>;
-export type MomentumChainStep = InferSelectModel<typeof momentumChainSteps>;
-
-export interface ChainWithSteps extends MomentumChain {
-  steps: MomentumChainStep[];
-}
+export type MomentumChainStep = {
+  id: string;
+  chainId: string;
+  title: string;
+  notes: string | null;
+  defaultSession: string | null;
+  leadOffsetSessions: number | null;
+  stepType: string | null;
+  orderIndex: number;
+  isOptional: boolean | null;
+  createdAt: string;
+  updatedAt: string;
+};

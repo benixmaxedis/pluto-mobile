@@ -15,11 +15,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pluto.app"
+      "bundleIdentifier": "com.pluto.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
         "backgroundColor": "#0F1117"
       },
       "package": "com.pluto.app"
@@ -31,7 +36,6 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite",
       "expo-secure-store",
       "expo-font",
       [
@@ -43,6 +47,15 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "supabaseUrl": "",
+      "supabasePublishableKey": "",
+      "supabaseAnonKey": "",
+      "router": {},
+      "eas": {
+        "projectId": "1cbf4ea9-3878-4e3b-8998-247c557533f9"
+      }
     }
   }
 }

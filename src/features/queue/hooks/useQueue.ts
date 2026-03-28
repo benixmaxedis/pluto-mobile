@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/db/query-keys';
+import { queryKeys } from '@/lib/query-keys';
 import { useAppStore } from '@/store/app-store';
 import { buildQueue, type QueueItem } from '../engine/queue-builder';
 import { getActionsForQueue } from '@/features/actions/db/action-queries';
@@ -29,7 +29,7 @@ async function fetchQueue(date: string, session: Session): Promise<QueueItem[]> 
   const instanceItems: QueueItem[] = rawInstances.map((ri) => ({
     id: ri.id,
     type: 'routine_instance' as const,
-    title: '', // Will be populated with template title via join
+    title: ri.templateTitle || 'Routine',
     session: (ri.effectiveSession ?? ri.scheduledSession ?? null) as Session | null,
     priority: 'normal' as const,
     status: ri.status ?? 'pending',
@@ -68,6 +68,22 @@ export function useFocusItem() {
 
 export function useQueuePreview(count = 5) {
   const queue = useQueue();
+  return {
+    ...queue,
+    data: queue.data?.slice(1, count + 1) ?? [],
+  };
+}
+
+export function useFocusItemForSession(date: string, session: Session) {
+  const queue = useQueueForSession(date, session);
+  return {
+    ...queue,
+    data: queue.data?.[0] ?? null,
+  };
+}
+
+export function useQueuePreviewForSession(date: string, session: Session, count = 5) {
+  const queue = useQueueForSession(date, session);
   return {
     ...queue,
     data: queue.data?.slice(1, count + 1) ?? [],

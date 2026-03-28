@@ -1,12 +1,13 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, FlatList, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { type FormSheetRef } from '@/components/sheets/FormSheet';
 import { colors, spacing, fontSize, borderRadius } from '@/lib/theme';
-import { SegmentedControl, EmptyState } from '@/components/ui';
+import { SegmentedControl, EmptyState, TabSwipePager } from '@/components/ui';
 import { ActionCard } from '@/components/cards/ActionCard';
+import { ActionFormSheet } from '@/components/sheets';
 import { useActions } from '@/features/actions/hooks/useActions';
-import { ActionTab } from '@/lib/constants';
-import { todayISO, toISODate } from '@/lib/utils/date';
+import { todayISO, toISODate, toComparableDate } from '@/lib/utils/date';
 import {
   addDays,
   startOfWeek,
@@ -46,6 +47,7 @@ const EMPTY_MESSAGES: Record<number, string> = {
 interface ActionRow {
   id: string;
   title: string;
+  notes: string | null;
   scheduledDate: string | null;
   effectiveDate: string | null;
   scheduledSession: string | null;
@@ -76,34 +78,35 @@ function filterActionsByTab(actions: ActionRow[], tabIndex: number): ActionRow[]
       // Overdue: effective_date < today AND status = pending AND not held
       return pending.filter((a) => {
         if (a.status !== 'pending' || a.isHeld) return false;
-        const effectiveDate = a.effectiveDate ?? a.scheduledDate;
-        if (!effectiveDate) return false;
-        return effectiveDate < today;
+        const canonical =
+          toComparableDate(a.effectiveDate) ?? toComparableDate(a.scheduledDate);
+        if (!canonical) return false;
+        return canonical < today;
       });
     }
     case 1: {
-      // Today
+      // Today: scheduled or effective lands on today (handles stale effective vs fresh scheduled)
       return pending.filter((a) => {
         if (a.status !== 'pending') return false;
-        const effectiveDate = a.effectiveDate ?? a.scheduledDate;
-        return effectiveDate === today;
+        const sched = toComparableDate(a.scheduledDate);
+        const eff = toComparableDate(a.effectiveDate);
+        return sched === today || eff === today;
       });
     }
     case 2: {
       // Tomorrow
       return pending.filter((a) => {
         if (a.status !== 'pending') return false;
-        const date = a.scheduledDate;
-        return date === tomorrow;
+        return toComparableDate(a.scheduledDate) === tomorrow;
       });
     }
     case 3: {
       // This Week (excludes today and tomorrow for clarity)
       return pending.filter((a) => {
         if (a.status !== 'pending') return false;
-        const date = a.scheduledDate;
+        const date = toComparableDate(a.scheduledDate);
         if (!date) return false;
-        const d = parseISO(date);
+        const d = parseISO(date + 'T12:00:00');
         return (
           isWithinInterval(d, { start: weekStart, end: weekEnd }) &&
           date !== today &&
@@ -115,9 +118,9 @@ function filterActionsByTab(actions: ActionRow[], tabIndex: number): ActionRow[]
       // Next Week
       return pending.filter((a) => {
         if (a.status !== 'pending') return false;
-        const date = a.scheduledDate;
+        const date = toComparableDate(a.scheduledDate);
         if (!date) return false;
-        const d = parseISO(date);
+        const d = parseISO(date + 'T12:00:00');
         return isWithinInterval(d, { start: nextWeekStart, end: nextWeekEnd });
       });
     }
@@ -125,9 +128,9 @@ function filterActionsByTab(actions: ActionRow[], tabIndex: number): ActionRow[]
       // This Month (excluding current and next week)
       return pending.filter((a) => {
         if (a.status !== 'pending') return false;
-        const date = a.scheduledDate;
+        const date = toComparableDate(a.scheduledDate);
         if (!date) return false;
-        const d = parseISO(date);
+        const d = parseISO(date + 'T12:00:00');
         return (
           isWithinInterval(d, { start: monthStart, end: monthEnd }) &&
           !isWithinInterval(d, { start: weekStart, end: nextWeekEnd })
@@ -138,9 +141,9 @@ function filterActionsByTab(actions: ActionRow[], tabIndex: number): ActionRow[]
       // Future: beyond this month
       return pending.filter((a) => {
         if (a.status !== 'pending') return false;
-        const date = a.scheduledDate;
+        const date = toComparableDate(a.scheduledDate);
         if (!date) return false;
-        const d = parseISO(date);
+        const d = parseISO(date + 'T12:00:00');
         return !isBefore(d, addDays(monthEnd, 1)) && !isEqual(d, monthEnd);
       });
     }
@@ -162,26 +165,39 @@ function filterActionsByTab(actions: ActionRow[], tabIndex: number): ActionRow[]
 
 export default function ActionsScreen() {
   const [selectedTab, setSelectedTab] = useState(1); // Default to "Today"
-  const { data: actions, isLoading } = useActions();
+  const { data: actions } = useActions();
+  const formSheetRef = useRef<FormSheetRef>(null);
+  const [editAction, setEditAction] = useState<ActionRow | null>(null);
 
-  const filteredActions = useMemo(() => {
-    if (!actions) return [];
-    return filterActionsByTab(actions as ActionRow[], selectedTab);
-  }, [actions, selectedTab]);
+  const filteredByTab = useMemo(() => {
+    if (!actions) return TAB_LABELS.map(() => [] as ActionRow[]);
+    const rows = actions as ActionRow[];
+    return TAB_LABELS.map((_, i) => filterActionsByTab(rows, i));
+  }, [actions]);
 
   const handleCreateAction = useCallback(() => {
-    console.log('Create action pressed');
+    setEditAction(null);
+    formSheetRef.current?.present();
+  }, []);
+
+  const handleEditAction = useCallback((item: ActionRow) => {
+    setEditAction(item);
+    formSheetRef.current?.present();
   }, []);
 
   const renderItem = useCallback(
     ({ item }: { item: ActionRow }) => {
       const today = todayISO();
-      const effectiveDate = item.effectiveDate ?? item.scheduledDate;
+      const canonical =
+        toComparableDate(item.effectiveDate) ?? toComparableDate(item.scheduledDate);
       const isOverdue =
-        item.status === 'pending' && !item.isHeld && !!effectiveDate && effectiveDate < today;
+        item.status === 'pending' && !item.isHeld && !!canonical && canonical < today;
 
       return (
-        <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
+        <Pressable
+          onPress={() => handleEditAction(item)}
+          style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}
+        >
           <ActionCard
             id={item.id}
             title={item.title}
@@ -193,10 +209,10 @@ export default function ActionsScreen() {
             status={item.status ?? 'pending'}
             isOverdue={isOverdue}
           />
-        </View>
+        </Pressable>
       );
     },
-    [],
+    [handleEditAction],
   );
 
   return (
@@ -225,25 +241,34 @@ export default function ActionsScreen() {
         />
       </View>
 
-      {/* Actions list */}
-      <FlatList
-        data={filteredActions}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={{
-          paddingBottom: spacing['3xl'] + 60, // Extra space for FAB
-          ...(filteredActions.length === 0 ? { flex: 1, justifyContent: 'center' as const } : {}),
-        }}
-        ListEmptyComponent={
-          <View style={{ paddingHorizontal: spacing.lg }}>
-            <EmptyState
-              message={EMPTY_MESSAGES[selectedTab] ?? 'No actions here.'}
-              accentColor={colors.actions.primary}
-            />
-          </View>
-        }
-        showsVerticalScrollIndicator={false}
-      />
+      <TabSwipePager selectedIndex={selectedTab} onIndexChange={setSelectedTab} style={{ flex: 1 }}>
+        {TAB_LABELS.map((_, tabIdx) => {
+          const filteredActions = filteredByTab[tabIdx] ?? [];
+          return (
+            <View key={TAB_LABELS[tabIdx]} style={{ flex: 1 }} collapsable={false}>
+              <FlatList
+                data={filteredActions}
+                keyExtractor={(item) => item.id}
+                renderItem={renderItem}
+                nestedScrollEnabled
+                contentContainerStyle={{
+                  paddingBottom: spacing['3xl'] + 60,
+                  ...(filteredActions.length === 0 ? { flex: 1, justifyContent: 'center' as const } : {}),
+                }}
+                ListEmptyComponent={
+                  <View style={{ paddingHorizontal: spacing.lg }}>
+                    <EmptyState
+                      message={EMPTY_MESSAGES[tabIdx] ?? 'No actions here.'}
+                      accentColor={colors.actions.primary}
+                    />
+                  </View>
+                }
+                showsVerticalScrollIndicator={false}
+              />
+            </View>
+          );
+        })}
+      </TabSwipePager>
 
       {/* FAB */}
       <Pressable
@@ -270,6 +295,25 @@ export default function ActionsScreen() {
           +
         </Text>
       </Pressable>
+
+      {/* Form Sheet */}
+      <ActionFormSheet
+        ref={formSheetRef}
+        editId={editAction?.id}
+        editData={
+          editAction
+            ? {
+                title: editAction.title,
+                notes: editAction.notes ?? undefined,
+                scheduledDate: editAction.scheduledDate ?? undefined,
+                scheduledSession: editAction.scheduledSession as any,
+                priority: (editAction.priority as any) ?? 'normal',
+                isHeld: editAction.isHeld ?? false,
+              }
+            : null
+        }
+        onDismiss={() => setEditAction(null)}
+      />
     </SafeAreaView>
   );
 }

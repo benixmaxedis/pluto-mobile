@@ -1,35 +1,59 @@
-import { eq, and, isNull } from 'drizzle-orm';
-import { db } from '@/lib/db/client';
-import { guideItems } from '@/lib/db/schema';
+import { getSupabase } from '@/lib/supabase/client';
+import { getCurrentUserId } from '@/lib/supabase/auth';
+import { camelRows, camelRow, snakeKeys } from '@/lib/supabase/rows';
 import { generateId } from '@/lib/utils/id';
 import { logEvent } from '@/features/activity/db/activity-queries';
 import { EventType, EntityType } from '@/lib/constants';
 import type { GuideItemFormData } from '@/lib/validation';
 
+async function uid(): Promise<string> {
+  return getCurrentUserId();
+}
+
 export async function getAllGuideItems() {
-  return db.select().from(guideItems).where(isNull(guideItems.deletedAt));
+  const userId = await uid();
+  const { data, error } = await getSupabase()
+    .from('guide_items')
+    .select('*')
+    .eq('user_id', userId)
+    .is('deleted_at', null);
+  if (error) throw error;
+  return camelRows((data ?? []) as Record<string, unknown>[]);
 }
 
 export async function getGuideItemById(id: string) {
-  const rows = await db.select().from(guideItems).where(eq(guideItems.id, id)).limit(1);
-  return rows[0] ?? null;
+  const userId = await uid();
+  const { data, error } = await getSupabase()
+    .from('guide_items')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? camelRow(data as Record<string, unknown>) : null;
 }
 
 export async function getGuideItemsByCategory(category: string) {
-  return db
-    .select()
-    .from(guideItems)
-    .where(and(isNull(guideItems.deletedAt), eq(guideItems.category, category)))
-    .orderBy(guideItems.sortOrder);
+  const userId = await uid();
+  const { data, error } = await getSupabase()
+    .from('guide_items')
+    .select('*')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .eq('category', category)
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return camelRows((data ?? []) as Record<string, unknown>[]);
 }
 
-export async function createGuideItem(data: GuideItemFormData, userId?: string) {
+export async function createGuideItem(data: GuideItemFormData, userIdParam?: string) {
+  const userId = userIdParam ?? (await uid());
   const id = generateId();
   const now = new Date().toISOString();
 
-  await db.insert(guideItems).values({
+  const row = snakeKeys({
     id,
-    userId: userId ?? null,
+    userId,
     title: data.title,
     category: data.category,
     statement: data.statement ?? null,
@@ -39,9 +63,12 @@ export async function createGuideItem(data: GuideItemFormData, userId?: string) 
     sortOrder: 0,
     createdAt: now,
     updatedAt: now,
-    syncStatus: 'pending',
+    syncStatus: 'synced',
     syncVersion: 0,
   });
+
+  const { error } = await getSupabase().from('guide_items').insert(row);
+  if (error) throw error;
 
   await logEvent({
     eventType: EventType.GUIDE_ITEM_CREATED,
@@ -54,23 +81,26 @@ export async function createGuideItem(data: GuideItemFormData, userId?: string) 
 }
 
 export async function updateGuideItem(id: string, data: Partial<GuideItemFormData>) {
-  await db
-    .update(guideItems)
-    .set({
-      ...data,
-      updatedAt: new Date().toISOString(),
-      syncStatus: 'pending',
-    })
-    .where(eq(guideItems.id, id));
+  const patch = snakeKeys({
+    ...data,
+    updatedAt: new Date().toISOString(),
+    syncStatus: 'synced',
+  } as Record<string, unknown>);
+  const { error } = await getSupabase().from('guide_items').update(patch).eq('id', id);
+  if (error) throw error;
 }
 
 export async function softDeleteGuideItem(id: string) {
-  await db
-    .update(guideItems)
-    .set({
-      deletedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      syncStatus: 'pending',
-    })
-    .where(eq(guideItems.id, id));
+  const now = new Date().toISOString();
+  const { error } = await getSupabase()
+    .from('guide_items')
+    .update(
+      snakeKeys({
+        deletedAt: now,
+        updatedAt: now,
+        syncStatus: 'synced',
+      }),
+    )
+    .eq('id', id);
+  if (error) throw error;
 }

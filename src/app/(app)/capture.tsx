@@ -1,14 +1,16 @@
-import { useState, useRef, useMemo } from 'react';
-import { View, Text, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { useState, useRef, useMemo, useCallback } from 'react';
+import { View, Text, FlatList, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { type FormSheetRef } from '@/components/sheets/FormSheet';
 import { useOpenLoops, useCreateOpenLoop, useArchiveOpenLoop } from '@/features/capture/hooks/useOpenLoops';
 import { useJournalEntriesByDate } from '@/features/capture/hooks/useJournal';
 import { toISODate } from '@/lib/utils/date';
 import { colors, spacing, fontSize, borderRadius } from '@/lib/theme';
-import { Card, EmptyState, SegmentedControl, TextInput, Button, Badge } from '@/components/ui';
+import { Card, EmptyState, SegmentedControl, TextInput, Button, TabSwipePager } from '@/components/ui';
 import { OpenLoopCard } from '@/components/cards/OpenLoopCard';
 import { JournalCard } from '@/components/cards/JournalCard';
+import { ConvertOpenLoopSheet, JournalFormSheet } from '@/components/sheets';
 
 const SEGMENTS = ['Open Loops', 'Journal', 'Pluto'];
 
@@ -23,6 +25,12 @@ export default function CaptureScreen() {
   const createOpenLoop = useCreateOpenLoop();
   const archiveOpenLoop = useArchiveOpenLoop();
   const { data: journalEntries } = useJournalEntriesByDate(today);
+
+  // Bottom sheet refs
+  const convertSheetRef = useRef<FormSheetRef>(null);
+  const journalSheetRef = useRef<FormSheetRef>(null);
+  const [convertLoop, setConvertLoop] = useState<{ id: string; title: string } | null>(null);
+  const [journalType, setJournalType] = useState<'morning' | 'evening'>('morning');
 
   const activeLoops = useMemo(
     () => (openLoops ?? []).filter((loop: any) => loop.status === 'active'),
@@ -49,9 +57,18 @@ export default function CaptureScreen() {
     archiveOpenLoop.mutate(id);
   };
 
-  const handleConvert = (_id: string) => {
-    // Placeholder -- navigate to convert flow in a future iteration
-  };
+  const handleConvert = useCallback((id: string) => {
+    const loop = (openLoops ?? []).find((l: any) => l.id === id) as any;
+    if (loop) {
+      setConvertLoop({ id: loop.id, title: loop.title });
+      convertSheetRef.current?.present();
+    }
+  }, [openLoops]);
+
+  const handleOpenJournal = useCallback((type: 'morning' | 'evening') => {
+    setJournalType(type);
+    journalSheetRef.current?.present();
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
@@ -78,9 +95,12 @@ export default function CaptureScreen() {
           />
         </View>
 
-        {/* ── Open Loops ─────────────────────────────────────── */}
-        {selectedSegment === 0 && (
-          <View style={{ flex: 1, paddingHorizontal: spacing.lg }}>
+        <TabSwipePager
+          selectedIndex={selectedSegment}
+          onIndexChange={setSelectedSegment}
+          style={{ flex: 1 }}
+        >
+          <View style={{ flex: 1, paddingHorizontal: spacing.lg }} collapsable={false}>
             <View
               style={{
                 flexDirection: 'row',
@@ -96,7 +116,7 @@ export default function CaptureScreen() {
                   onChangeText={setInputText}
                   onSubmitEditing={handleSubmit}
                   returnKeyType="done"
-                  autoFocus
+                  autoFocus={selectedSegment === 0}
                 />
               </View>
               <Button
@@ -119,6 +139,8 @@ export default function CaptureScreen() {
               <FlatList
                 data={activeLoops}
                 keyExtractor={(item: any) => item.id}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
                 contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing['3xl'] }}
                 renderItem={({ item }: { item: any }) => (
                   <OpenLoopCard
@@ -133,31 +155,39 @@ export default function CaptureScreen() {
               />
             )}
           </View>
-        )}
 
-        {/* ── Journal ────────────────────────────────────────── */}
-        {selectedSegment === 1 && (
-          <View style={{ flex: 1, paddingHorizontal: spacing.lg, gap: spacing.md, paddingTop: spacing.md }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              paddingHorizontal: spacing.lg,
+              gap: spacing.md,
+              paddingTop: spacing.md,
+              paddingBottom: spacing['3xl'],
+            }}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+          >
             <JournalCard
               type="morning"
               isCompleted={!!morningEntry}
-              onPress={() => {
-                // Placeholder navigation
-              }}
+              onPress={() => handleOpenJournal('morning')}
             />
             <JournalCard
               type="evening"
               isCompleted={!!eveningEntry}
-              onPress={() => {
-                // Placeholder navigation
-              }}
+              onPress={() => handleOpenJournal('evening')}
             />
-          </View>
-        )}
+          </ScrollView>
 
-        {/* ── Pluto ──────────────────────────────────────────── */}
-        {selectedSegment === 2 && (
-          <View style={{ flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              paddingHorizontal: spacing.lg,
+              paddingTop: spacing.md,
+              paddingBottom: spacing['3xl'],
+            }}
+            nestedScrollEnabled
+          >
             <Card accentColor={colors.capture.primary}>
               <View style={{ alignItems: 'center', gap: spacing.lg, paddingVertical: spacing.lg }}>
                 <Text
@@ -188,9 +218,37 @@ export default function CaptureScreen() {
                 />
               </View>
             </Card>
-          </View>
-        )}
+          </ScrollView>
+        </TabSwipePager>
       </KeyboardAvoidingView>
+
+      {/* Convert Open Loop Sheet */}
+      <ConvertOpenLoopSheet
+        ref={convertSheetRef}
+        loopId={convertLoop?.id ?? null}
+        loopTitle={convertLoop?.title ?? ''}
+        onDismiss={() => setConvertLoop(null)}
+      />
+
+      {/* Journal Form Sheet */}
+      <JournalFormSheet
+        ref={journalSheetRef}
+        journalType={journalType}
+        date={today}
+        existingData={
+          journalType === 'morning'
+            ? morningEntry
+              ? (morningEntry as any).answersJson
+                ? JSON.parse((morningEntry as any).answersJson)
+                : null
+              : null
+            : eveningEntry
+              ? (eveningEntry as any).answersJson
+                ? JSON.parse((eveningEntry as any).answersJson)
+                : null
+              : null
+        }
+      />
     </SafeAreaView>
   );
 }

@@ -1,7 +1,7 @@
-import { eq, and } from 'drizzle-orm';
 import { addDays, differenceInWeeks, getDay, getDate, getMonth, format } from 'date-fns';
-import { db } from '@/lib/db/client';
-import { routineInstances, routineSubtasks, routineInstanceSubtasks } from '@/lib/db/schema';
+import { getSupabase } from '@/lib/supabase/client';
+import { getCurrentUserId } from '@/lib/supabase/auth';
+import { camelRows, snakeKeys } from '@/lib/supabase/rows';
 import { generateId } from '@/lib/utils/id';
 import type { RoutineTemplate } from '../types';
 
@@ -15,6 +15,26 @@ const DAY_MAP: Record<string, number> = {
   saturday: 6,
 };
 
+const FORM_DAY_TO_GET_DAY: Record<number, number> = {
+  1: 1,
+  2: 2,
+  3: 3,
+  4: 4,
+  5: 5,
+  6: 6,
+  7: 0,
+};
+
+function dayMatchesStoredValue(dayOfWeek: number, raw: unknown): boolean {
+  if (typeof raw === 'number' && raw >= 1 && raw <= 7) {
+    return FORM_DAY_TO_GET_DAY[raw] === dayOfWeek;
+  }
+  if (typeof raw === 'string') {
+    return DAY_MAP[raw.toLowerCase()] === dayOfWeek;
+  }
+  return false;
+}
+
 function matchesRecurrence(template: RoutineTemplate, date: Date): boolean {
   const dayOfWeek = getDay(date);
   const dayOfMonth = getDate(date);
@@ -23,8 +43,8 @@ function matchesRecurrence(template: RoutineTemplate, date: Date): boolean {
   switch (template.recurrenceType) {
     case 'weekly': {
       if (!template.recurrenceDaysJson) return false;
-      const days: string[] = JSON.parse(template.recurrenceDaysJson);
-      return days.some((d) => DAY_MAP[d] === dayOfWeek);
+      const days: unknown[] = JSON.parse(template.recurrenceDaysJson);
+      return days.some((d) => dayMatchesStoredValue(dayOfWeek, d));
     }
 
     case 'fortnightly': {
@@ -32,8 +52,8 @@ function matchesRecurrence(template: RoutineTemplate, date: Date): boolean {
       const anchor = new Date(template.recurrenceAnchorDate + 'T00:00:00');
       const weeksDiff = differenceInWeeks(date, anchor);
       if (weeksDiff % 2 !== 0) return false;
-      const days: string[] = JSON.parse(template.recurrenceDaysJson);
-      return days.some((d) => DAY_MAP[d] === dayOfWeek);
+      const days: unknown[] = JSON.parse(template.recurrenceDaysJson);
+      return days.some((d) => dayMatchesStoredValue(dayOfWeek, d));
     }
 
     case 'monthly': {
@@ -43,7 +63,6 @@ function matchesRecurrence(template: RoutineTemplate, date: Date): boolean {
       if (targetDay && typeof targetDay === 'number') {
         return dayOfMonth === targetDay;
       }
-      // Fall back to anchor date's day of month
       if (template.recurrenceAnchorDate) {
         const anchorDay = getDate(new Date(template.recurrenceAnchorDate + 'T00:00:00'));
         return dayOfMonth === anchorDay;
@@ -71,10 +90,6 @@ function matchesRecurrence(template: RoutineTemplate, date: Date): boolean {
   }
 }
 
-/**
- * Generates routine instances for a rolling window from startDate to endDate.
- * Deduplicates via source_generation_key.
- */
 export async function generateInstancesForWindow(
   templates: RoutineTemplate[],
   startDate: Date,
@@ -82,6 +97,7 @@ export async function generateInstancesForWindow(
 ) {
   const activeTemplates = templates.filter((t) => t.isActive && !t.deletedAt);
   let generatedCount = 0;
+  const sb = getSupabase();
 
   for (let dayOffset = 0; dayOffset < windowDays; dayOffset++) {
     const date = addDays(startDate, dayOffset);
@@ -92,23 +108,22 @@ export async function generateInstancesForWindow(
 
       const genKey = `${template.id}_${dateStr}`;
 
-      // Check for existing instance
-      const existing = await db
-        .select({ id: routineInstances.id })
-        .from(routineInstances)
-        .where(eq(routineInstances.sourceGenerationKey, genKey))
-        .limit(1);
+      const { data: existing } = await sb
+        .from('routine_instances')
+        .select('id')
+        .eq('source_generation_key', genKey)
+        .maybeSingle();
 
-      if (existing.length > 0) continue;
+      if (existing) continue;
 
-      // Create instance
       const instanceId = generateId();
       const now = new Date().toISOString();
+      const userId = (template.userId as string) ?? (await getCurrentUserId());
 
-      await db.insert(routineInstances).values({
+      const instRow = snakeKeys({
         id: instanceId,
         routineTemplateId: template.id,
-        userId: template.userId,
+        userId,
         instanceDate: dateStr,
         scheduledSession: template.defaultSession,
         effectiveSession: template.defaultSession,
@@ -117,19 +132,24 @@ export async function generateInstancesForWindow(
         sortOrder: 0,
         createdAt: now,
         updatedAt: now,
-        syncStatus: 'pending',
+        syncStatus: 'synced',
         syncVersion: 0,
       });
 
-      // Copy template subtasks to instance
-      const templateSubtasks = await db
-        .select()
-        .from(routineSubtasks)
-        .where(eq(routineSubtasks.routineTemplateId, template.id))
-        .orderBy(routineSubtasks.sortOrder);
+      const { error: insErr } = await sb.from('routine_instances').insert(instRow);
+      if (insErr) throw insErr;
+
+      const { data: subRows, error: subErr } = await sb
+        .from('routine_subtasks')
+        .select('*')
+        .eq('routine_template_id', template.id)
+        .order('sort_order', { ascending: true });
+      if (subErr) throw subErr;
+
+      const templateSubtasks = camelRows((subRows ?? []) as Record<string, unknown>[]);
 
       for (const sub of templateSubtasks) {
-        await db.insert(routineInstanceSubtasks).values({
+        const stRow = snakeKeys({
           id: generateId(),
           routineInstanceId: instanceId,
           templateSubtaskId: sub.id,
@@ -139,6 +159,8 @@ export async function generateInstancesForWindow(
           createdAt: now,
           updatedAt: now,
         });
+        const { error: stErr } = await sb.from('routine_instance_subtasks').insert(stRow);
+        if (stErr) throw stErr;
       }
 
       generatedCount++;

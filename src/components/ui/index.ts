@@ -5,4 +5,5 @@ export { Chip } from './Chip';
 export { EmptyState } from './EmptyState';
 export { IconButton } from './IconButton';
 export { SegmentedControl } from './SegmentedControl';
+export { TabSwipePager } from './TabSwipePager';
 export { TextInput } from './TextInput';

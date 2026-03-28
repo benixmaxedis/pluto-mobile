@@ -43,6 +43,9 @@ yarn-error.*
 *.db
 *.db-journal
 
+# Supabase CLI (local cache)
+supabase/.temp/
+
 # drizzle
 drizzle/
 .claude/

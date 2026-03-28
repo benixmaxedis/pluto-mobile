@@ -1,30 +1,30 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '@/store/auth-store';
+import { getSupabase } from '@/lib/supabase/client';
+import { getOrCreateDeviceUserId } from '@/lib/identity/device-user-id';
+import { queryClient } from '@/lib/query-client';
 
 SplashScreen.preventAutoHideAsync();
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      retry: 1,
-    },
-  },
-});
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  const [isNavigationReady, setNavigationReady] = useState(false);
 
   useEffect(() => {
-    if (isLoading) return;
+    const timer = setTimeout(() => setNavigationReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (isLoading || !isNavigationReady) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
@@ -33,20 +33,24 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     } else if (isAuthenticated && inAuthGroup) {
       router.replace('/(app)/now');
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, isNavigationReady, segments]);
 
   return <>{children}</>;
 }
 
 export default function RootLayout() {
   useEffect(() => {
-    // TODO: Restore auth session from SecureStore, init DB
-    // For now, mark as unauthenticated after brief delay
-    const timeout = setTimeout(() => {
-      useAuthStore.getState().setUnauthenticated();
-      SplashScreen.hideAsync();
-    }, 500);
-    return () => clearTimeout(timeout);
+    void (async () => {
+      try {
+        getSupabase();
+        const userId = await getOrCreateDeviceUserId();
+        useAuthStore.getState().setAuthenticated(userId);
+      } catch {
+        useAuthStore.getState().setUnauthenticated();
+      } finally {
+        void SplashScreen.hideAsync();
+      }
+    })();
   }, []);
 
   return (

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/db/query-keys';
+import { queryKeys } from '@/lib/query-keys';
 import * as routineQueries from '../db/routine-queries';
 
 export function useRoutineTemplates() {

@@ -1,4 +1,5 @@
 import { createChain, getActiveChains } from './chain-queries';
+import { getCurrentUserId } from '@/lib/supabase/auth';
 import type { MomentumChainFormData, MomentumChainStepFormData } from '@/lib/validation';
 
 /**
@@ -6,6 +7,7 @@ import type { MomentumChainFormData, MomentumChainStepFormData } from '@/lib/val
  * Called during onboarding or first app launch.
  */
 export async function seedStarterChains(userId?: string): Promise<void> {
+  const resolvedUserId = userId ?? (await getCurrentUserId());
   const existing = await getActiveChains();
   if (existing.length > 0) {
     return; // Already seeded — skip
@@ -114,7 +116,7 @@ export async function seedStarterChains(userId?: string): Promise<void> {
     },
   ];
 
-  await createChain(exerciseChain, exerciseSteps, userId, 'system');
-  await createChain(nutritionChain, nutritionSteps, userId, 'system');
-  await createChain(sleepChain, sleepSteps, userId, 'system');
+  await createChain(exerciseChain, exerciseSteps, resolvedUserId, 'system');
+  await createChain(nutritionChain, nutritionSteps, resolvedUserId, 'system');
+  await createChain(sleepChain, sleepSteps, resolvedUserId, 'system');
 }

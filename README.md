@@ -6,6 +6,10 @@ Pluto is not a task manager. It is a momentum tool that reduces decision load, g
 
 Core question: **"What is the next thing I can do right now?"**
 
+## Issue tracker and data model
+
+Work is tracked in [benixmaxedis/pluto-mobile](https://github.com/benixmaxedis/pluto-mobile/issues). Table-level specs map to closed schema issues listed in [docs/DATA_MODEL.md](docs/DATA_MODEL.md) (use the [GitHub CLI](https://cli.github.com/) with `gh issue view` / `gh issue list`).
+
 ## Tech Stack
 
 | Layer | Technology |

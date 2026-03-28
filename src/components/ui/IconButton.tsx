@@ -16,7 +16,7 @@ export function IconButton({
 }: IconButtonProps) {
   return (
     <Pressable
-      style={({ pressed }) => [
+      style={(state) => [
         {
           width: size,
           height: size,
@@ -24,9 +24,9 @@ export function IconButton({
           backgroundColor,
           alignItems: 'center' as const,
           justifyContent: 'center' as const,
-          opacity: pressed ? 0.7 : 1,
+          opacity: state.pressed ? 0.7 : 1,
         },
-        typeof style === 'function' ? style({ pressed }) : style,
+        typeof style === 'function' ? style(state) : style,
       ]}
       {...props}
     >

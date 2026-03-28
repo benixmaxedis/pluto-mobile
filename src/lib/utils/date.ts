@@ -1,4 +1,14 @@
-import { format, isToday, isTomorrow, isYesterday, startOfDay } from 'date-fns';
+import { format, isToday, isTomorrow, isYesterday, startOfDay, parseISO, isValid } from 'date-fns';
+
+/** Normalize stored dates (yyyy-MM-dd or ISO timestamps) for comparisons with todayISO(). */
+export function toComparableDate(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  const d = parseISO(s.length === 10 ? `${s}T12:00:00` : s);
+  if (!isValid(d)) return null;
+  return format(d, 'yyyy-MM-dd');
+}
 
 export function toISODate(date: Date): string {
   return format(date, 'yyyy-MM-dd');

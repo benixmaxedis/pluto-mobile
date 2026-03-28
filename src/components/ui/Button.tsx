@@ -29,7 +29,7 @@ export function Button({
   return (
     <Pressable
       disabled={disabled || loading}
-      style={({ pressed }) => [
+      style={(state) => [
         {
           backgroundColor: isPrimary ? accentColor : isGhost ? 'transparent' : colors.surface,
           paddingVertical: paddingY,
@@ -39,11 +39,11 @@ export function Button({
           justifyContent: 'center' as const,
           flexDirection: 'row' as const,
           gap: spacing.sm,
-          opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
+          opacity: disabled ? 0.5 : state.pressed ? 0.8 : 1,
           borderWidth: isGhost ? 0 : variant === 'secondary' ? 1 : 0,
           borderColor: variant === 'secondary' ? colors.border : undefined,
         },
-        typeof style === 'function' ? style({ pressed }) : style,
+        typeof style === 'function' ? style(state) : style,
       ]}
       {...props}
     >

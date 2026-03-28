@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/db/query-keys';
+import { queryKeys } from '@/lib/query-keys';
 import * as strategyQueries from '../db/strategy-queries';
 import type { StrategyFormData } from '@/lib/validation';
 

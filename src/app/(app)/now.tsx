@@ -1,12 +1,12 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize } from '@/lib/theme';
-import { SegmentedControl, EmptyState } from '@/components/ui';
+import { SegmentedControl, EmptyState, TabSwipePager } from '@/components/ui';
 import { FocusCard } from '@/components/cards/FocusCard';
 import { QueueItemCard } from '@/components/cards/QueueItemCard';
 import { useSessionEngine } from '@/features/queue/hooks/useSessionEngine';
-import { useFocusItem, useQueuePreview, useQueue } from '@/features/queue/hooks/useQueue';
+import { useQueue, useFocusItemForSession, useQueuePreviewForSession } from '@/features/queue/hooks/useQueue';
 import { useAppStore } from '@/store/app-store';
 import { useCompleteAction, useSkipAction, useSnoozeAction, useMoveAction } from '@/features/actions/hooks/useActionMutations';
 import { useCompleteInstance, useSkipInstance, useSnoozeInstance, useMoveInstance } from '@/features/routines/hooks/useRoutineMutations';
@@ -29,7 +29,7 @@ function getSessionFromTabIndex(index: number): { session: Session; date: string
     case 2:
       return { session: Session.EVENING, date: today };
     case 3:
-      return { session: Session.MORNING, date: today }; // "Today" uses current session
+      return { session: Session.MORNING, date: today };
     case 4:
       return { session: Session.MORNING, date: tomorrow };
     default:
@@ -37,46 +37,24 @@ function getSessionFromTabIndex(index: number): { session: Session; date: string
   }
 }
 
-export default function NowScreen() {
-  useSessionEngine();
+/** Date + session shown for a Now tab (Today follows live session from the store). */
+function getNowTabDateAndSession(tabIndex: number, storeSession: Session): { session: Session; date: string } {
+  if (tabIndex === 3) {
+    return { session: storeSession, date: todayISO() };
+  }
+  return getSessionFromTabIndex(tabIndex);
+}
 
-  const { selectedDate, currentSession, setSelectedDate, setCurrentSession } = useAppStore();
-
-  const currentSessionIndex = SESSION_ORDER.indexOf(currentSession);
-  const [selectedTabIndex, setSelectedTabIndex] = useState(
-    currentSessionIndex >= 0 ? currentSessionIndex : 0,
+const NowTabPage = memo(function NowTabPage({ tabIndex }: { tabIndex: number }) {
+  const currentSession = useAppStore((s) => s.currentSession);
+  const { date, session } = useMemo(
+    () => getNowTabDateAndSession(tabIndex, currentSession),
+    [tabIndex, currentSession],
   );
 
-  const handleTabSelect = useCallback(
-    (index: number) => {
-      setSelectedTabIndex(index);
-      const { session, date } = getSessionFromTabIndex(index);
+  const focusItem = useFocusItemForSession(date, session);
+  const queuePreview = useQueuePreviewForSession(date, session, 4);
 
-      if (index === 3) {
-        // "Today" tab -- use current auto-detected session
-        setSelectedDate(todayISO());
-        return;
-      }
-
-      setSelectedDate(date);
-      setCurrentSession(session);
-    },
-    [setSelectedDate, setCurrentSession],
-  );
-
-  const focusItem = useFocusItem();
-  const queuePreview = useQueuePreview(4);
-  const fullQueue = useQueue();
-
-  // Compute progress: completed + current pending total for the day
-  const completedCount = useMemo(() => {
-    if (!fullQueue.data) return 0;
-    return 0; // Queue only returns pending items; completed items are filtered out
-  }, [fullQueue.data]);
-
-  const totalCount = fullQueue.data?.length ?? 0;
-
-  // Mutations
   const completeAction = useCompleteAction();
   const skipAction = useSkipAction();
   const snoozeAction = useSnoozeAction();
@@ -119,16 +97,15 @@ export default function NowScreen() {
       const item = focusItem.data;
       if (!item) return;
 
-      // Default snooze: next session same day
-      const nextSessionIndex = SESSION_ORDER.indexOf(currentSession) + 1;
+      const nextSessionIndex = SESSION_ORDER.indexOf(session) + 1;
       const nextSession =
         nextSessionIndex < SESSION_ORDER.length
           ? SESSION_ORDER[nextSessionIndex]
           : Session.MORNING;
       const snoozeDate =
         nextSessionIndex < SESSION_ORDER.length
-          ? selectedDate
-          : toISODate(addDays(new Date(selectedDate + 'T00:00:00'), 1));
+          ? date
+          : toISODate(addDays(new Date(date + 'T00:00:00'), 1));
 
       if (item.type === 'action') {
         snoozeAction.mutate({ id, untilDate: snoozeDate, untilSession: nextSession });
@@ -136,7 +113,7 @@ export default function NowScreen() {
         snoozeInstance.mutate({ id, untilSession: nextSession });
       }
     },
-    [focusItem.data, currentSession, selectedDate, snoozeAction, snoozeInstance],
+    [focusItem.data, session, date, snoozeAction, snoozeInstance],
   );
 
   const handleMove = useCallback(
@@ -144,16 +121,15 @@ export default function NowScreen() {
       const item = focusItem.data;
       if (!item) return;
 
-      // Default move: next session same day
-      const nextSessionIndex = SESSION_ORDER.indexOf(currentSession) + 1;
+      const nextSessionIndex = SESSION_ORDER.indexOf(session) + 1;
       const nextSession =
         nextSessionIndex < SESSION_ORDER.length
           ? SESSION_ORDER[nextSessionIndex]
           : Session.MORNING;
       const moveDate =
         nextSessionIndex < SESSION_ORDER.length
-          ? selectedDate
-          : toISODate(addDays(new Date(selectedDate + 'T00:00:00'), 1));
+          ? date
+          : toISODate(addDays(new Date(date + 'T00:00:00'), 1));
 
       if (item.type === 'action') {
         moveAction.mutate({ id, toDate: moveDate, toSession: nextSession });
@@ -161,8 +137,80 @@ export default function NowScreen() {
         moveInstance.mutate({ id, toSession: nextSession });
       }
     },
-    [focusItem.data, currentSession, selectedDate, moveAction, moveInstance],
+    [focusItem.data, session, date, moveAction, moveInstance],
   );
+
+  return (
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing['3xl'] }}
+      showsVerticalScrollIndicator={false}
+      nestedScrollEnabled
+    >
+      {focusItem.data ? (
+        <FocusCard
+          item={focusItem.data}
+          onComplete={handleComplete}
+          onSkip={handleSkip}
+          onSnooze={handleSnooze}
+          onMove={handleMove}
+        />
+      ) : (
+        <EmptyState message="Nothing right now. You're all caught up." />
+      )}
+
+      {queuePreview.data && queuePreview.data.length > 0 && (
+        <View style={{ gap: spacing.md }}>
+          <Text
+            style={{
+              fontSize: fontSize.sm,
+              color: colors.text.secondary,
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}
+          >
+            Up Next
+          </Text>
+          <View style={{ gap: spacing.sm }}>
+            {queuePreview.data.map((item) => (
+              <QueueItemCard key={item.id} item={item} />
+            ))}
+          </View>
+        </View>
+      )}
+    </ScrollView>
+  );
+});
+
+export default function NowScreen() {
+  useSessionEngine();
+
+  const { selectedDate, currentSession, setSelectedDate, setCurrentSession } = useAppStore();
+
+  const currentSessionIndex = SESSION_ORDER.indexOf(currentSession);
+  const [selectedTabIndex, setSelectedTabIndex] = useState(
+    currentSessionIndex >= 0 ? currentSessionIndex : 0,
+  );
+
+  const handleTabSelect = useCallback(
+    (index: number) => {
+      setSelectedTabIndex(index);
+      const { session, date } = getSessionFromTabIndex(index);
+
+      if (index === 3) {
+        setSelectedDate(todayISO());
+        return;
+      }
+
+      setSelectedDate(date);
+      setCurrentSession(session);
+    },
+    [setSelectedDate, setCurrentSession],
+  );
+
+  const fullQueue = useQueue();
+  const totalCount = fullQueue.data?.length ?? 0;
 
   const displayDate = formatDisplayDate(selectedDate);
   const dayOfWeek = format(new Date(selectedDate + 'T00:00:00'), 'EEEE');
@@ -170,12 +218,7 @@ export default function NowScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing['3xl'] }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
+      <View style={{ paddingTop: spacing.lg, paddingHorizontal: spacing.lg, gap: spacing.lg }}>
         <View style={{ gap: spacing.xs }}>
           <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary }}>
             {displayDate} &middot; {dayOfWeek}
@@ -190,49 +233,21 @@ export default function NowScreen() {
           </View>
         </View>
 
-        {/* Session tabs */}
         <SegmentedControl
           segments={SESSION_TABS}
           selectedIndex={selectedTabIndex}
           onSelect={handleTabSelect}
           scrollable
         />
+      </View>
 
-        {/* Focus card */}
-        {focusItem.data ? (
-          <FocusCard
-            item={focusItem.data}
-            onComplete={handleComplete}
-            onSkip={handleSkip}
-            onSnooze={handleSnooze}
-            onMove={handleMove}
-          />
-        ) : (
-          <EmptyState message="Nothing right now. You're all caught up." />
-        )}
-
-        {/* Queue preview */}
-        {queuePreview.data && queuePreview.data.length > 0 && (
-          <View style={{ gap: spacing.md }}>
-            <Text
-              style={{
-                fontSize: fontSize.sm,
-                color: colors.text.secondary,
-                fontWeight: '600',
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-              }}
-            >
-              Up Next
-            </Text>
-            <View style={{ gap: spacing.sm }}>
-              {queuePreview.data.map((item) => (
-                <QueueItemCard key={item.id} item={item} />
-              ))}
-            </View>
+      <TabSwipePager selectedIndex={selectedTabIndex} onIndexChange={handleTabSelect} style={{ flex: 1 }}>
+        {SESSION_TABS.map((_, i) => (
+          <View key={SESSION_TABS[i]} style={{ flex: 1 }} collapsable={false}>
+            <NowTabPage tabIndex={i} />
           </View>
-        )}
-      </ScrollView>
+        ))}
+      </TabSwipePager>
     </SafeAreaView>
   );
 }

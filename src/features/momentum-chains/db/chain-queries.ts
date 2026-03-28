@@ -1,58 +1,85 @@
-import { eq, and, isNull } from 'drizzle-orm';
-import { db } from '@/lib/db/client';
-import { momentumChains, momentumChainSteps } from '@/lib/db/schema';
+import { getSupabase } from '@/lib/supabase/client';
+import { getCurrentUserId } from '@/lib/supabase/auth';
+import { camelRows, camelRow, snakeKeys } from '@/lib/supabase/rows';
 import { generateId } from '@/lib/utils/id';
 import { logEvent } from '@/features/activity/db/activity-queries';
 import { EventType, EntityType } from '@/lib/constants';
 import type { MomentumChainFormData, MomentumChainStepFormData } from '@/lib/validation';
 
+async function uid(): Promise<string> {
+  return getCurrentUserId();
+}
+
 export async function getAllChains() {
-  return db.select().from(momentumChains).where(isNull(momentumChains.deletedAt));
+  const userId = await uid();
+  const { data, error } = await getSupabase()
+    .from('momentum_chains')
+    .select('*')
+    .eq('user_id', userId)
+    .is('deleted_at', null);
+  if (error) throw error;
+  return camelRows((data ?? []) as Record<string, unknown>[]);
 }
 
 export async function getActiveChains() {
-  return db
-    .select()
-    .from(momentumChains)
-    .where(and(isNull(momentumChains.deletedAt), eq(momentumChains.isActive, true)));
+  const userId = await uid();
+  const { data, error } = await getSupabase()
+    .from('momentum_chains')
+    .select('*')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .eq('is_active', true);
+  if (error) throw error;
+  return camelRows((data ?? []) as Record<string, unknown>[]);
 }
 
 export async function getChainById(id: string) {
-  const rows = await db
-    .select()
-    .from(momentumChains)
-    .where(eq(momentumChains.id, id))
-    .limit(1);
-  return rows[0] ?? null;
+  const userId = await uid();
+  const { data, error } = await getSupabase()
+    .from('momentum_chains')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? camelRow(data as Record<string, unknown>) : null;
 }
 
 export async function getChainsByDomain(domain: string) {
-  return db
-    .select()
-    .from(momentumChains)
-    .where(and(isNull(momentumChains.deletedAt), eq(momentumChains.domain, domain)));
+  const userId = await uid();
+  const { data, error } = await getSupabase()
+    .from('momentum_chains')
+    .select('*')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .eq('domain', domain);
+  if (error) throw error;
+  return camelRows((data ?? []) as Record<string, unknown>[]);
 }
 
 export async function getChainSteps(chainId: string) {
-  return db
-    .select()
-    .from(momentumChainSteps)
-    .where(eq(momentumChainSteps.chainId, chainId))
-    .orderBy(momentumChainSteps.orderIndex);
+  const { data, error } = await getSupabase()
+    .from('momentum_chain_steps')
+    .select('*')
+    .eq('chain_id', chainId)
+    .order('order_index', { ascending: true });
+  if (error) throw error;
+  return camelRows((data ?? []) as Record<string, unknown>[]);
 }
 
 export async function createChain(
   data: MomentumChainFormData,
   steps: MomentumChainStepFormData[],
-  userId?: string,
+  userIdParam?: string,
   createdBy: 'user' | 'system' | 'pluto' = 'user',
 ) {
+  const userId = userIdParam ?? (await uid());
   const chainId = generateId();
   const now = new Date().toISOString();
 
-  await db.insert(momentumChains).values({
+  const chainRow = snakeKeys({
     id: chainId,
-    userId: userId ?? null,
+    userId,
     name: data.name,
     domain: data.domain,
     description: data.description ?? null,
@@ -60,13 +87,16 @@ export async function createChain(
     createdBy,
     createdAt: now,
     updatedAt: now,
-    syncStatus: 'pending',
+    syncStatus: 'synced',
     syncVersion: 0,
   });
 
+  const { error: ce } = await getSupabase().from('momentum_chains').insert(chainRow);
+  if (ce) throw ce;
+
   for (let i = 0; i < steps.length; i++) {
-    const step = steps[i];
-    await db.insert(momentumChainSteps).values({
+    const step = steps[i]!;
+    const stepRow = snakeKeys({
       id: generateId(),
       chainId,
       title: step.title,
@@ -79,6 +109,8 @@ export async function createChain(
       createdAt: now,
       updatedAt: now,
     });
+    const { error: se } = await getSupabase().from('momentum_chain_steps').insert(stepRow);
+    if (se) throw se;
   }
 
   await logEvent({
@@ -93,42 +125,48 @@ export async function createChain(
 }
 
 export async function updateChain(id: string, data: Partial<MomentumChainFormData>) {
-  await db
-    .update(momentumChains)
-    .set({
-      ...data,
-      updatedAt: new Date().toISOString(),
-      syncStatus: 'pending',
-    })
-    .where(eq(momentumChains.id, id));
+  const patch = snakeKeys({
+    ...data,
+    updatedAt: new Date().toISOString(),
+    syncStatus: 'synced',
+  } as Record<string, unknown>);
+  const { error } = await getSupabase().from('momentum_chains').update(patch).eq('id', id);
+  if (error) throw error;
 
   const chain = await getChainById(id);
   await logEvent({
     eventType: EventType.MOMENTUM_CHAIN_UPDATED,
     entityType: EntityType.MOMENTUM_CHAIN,
     entityId: id,
-    userId: chain?.userId ?? undefined,
+    userId: chain?.userId as string | undefined,
   });
 }
 
 export async function toggleChainActive(id: string, isActive: boolean) {
-  await db
-    .update(momentumChains)
-    .set({
-      isActive,
-      updatedAt: new Date().toISOString(),
-      syncStatus: 'pending',
-    })
-    .where(eq(momentumChains.id, id));
+  const { error } = await getSupabase()
+    .from('momentum_chains')
+    .update(
+      snakeKeys({
+        isActive,
+        updatedAt: new Date().toISOString(),
+        syncStatus: 'synced',
+      }),
+    )
+    .eq('id', id);
+  if (error) throw error;
 }
 
 export async function softDeleteChain(id: string) {
-  await db
-    .update(momentumChains)
-    .set({
-      deletedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      syncStatus: 'pending',
-    })
-    .where(eq(momentumChains.id, id));
+  const now = new Date().toISOString();
+  const { error } = await getSupabase()
+    .from('momentum_chains')
+    .update(
+      snakeKeys({
+        deletedAt: now,
+        updatedAt: now,
+        syncStatus: 'synced',
+      }),
+    )
+    .eq('id', id);
+  if (error) throw error;
 }

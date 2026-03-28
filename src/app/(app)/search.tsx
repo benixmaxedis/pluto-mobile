@@ -9,15 +9,8 @@ import {
   type ListRenderItem,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { like, isNull, and } from 'drizzle-orm';
-import { db } from '@/lib/db/client';
-import {
-  actions,
-  routineTemplates,
-  openLoops,
-  guideItems,
-  strategies,
-} from '@/lib/db/schema';
+import { getSupabase } from '@/lib/supabase/client';
+import { getCurrentUserId } from '@/lib/supabase/auth';
 import { colors, spacing, fontSize, borderRadius } from '@/lib/theme';
 
 // ── Types ────────────────────────────────────────────────
@@ -49,66 +42,78 @@ export default function SearchScreen() {
     const pattern = `%${trimmed}%`;
 
     try {
+      const userId = await getCurrentUserId();
+      const sb = getSupabase();
+
       const [
-        matchedActions,
-        matchedRoutines,
-        matchedOpenLoops,
-        matchedGuideItems,
-        matchedStrategies,
+        { data: matchedActions },
+        { data: matchedRoutines },
+        { data: matchedOpenLoops },
+        { data: matchedGuideItems },
+        { data: matchedStrategies },
       ] = await Promise.all([
-        db
-          .select({ id: actions.id, title: actions.title, notes: actions.notes })
-          .from(actions)
-          .where(and(like(actions.title, pattern), isNull(actions.deletedAt)))
+        sb
+          .from('actions')
+          .select('id, title, notes')
+          .eq('user_id', userId)
+          .is('deleted_at', null)
+          .ilike('title', pattern)
           .limit(10),
-        db
-          .select({ id: routineTemplates.id, title: routineTemplates.title, category: routineTemplates.category })
-          .from(routineTemplates)
-          .where(and(like(routineTemplates.title, pattern), isNull(routineTemplates.deletedAt)))
+        sb
+          .from('routine_templates')
+          .select('id, title, category')
+          .eq('user_id', userId)
+          .is('deleted_at', null)
+          .ilike('title', pattern)
           .limit(10),
-        db
-          .select({ id: openLoops.id, title: openLoops.title, body: openLoops.body })
-          .from(openLoops)
-          .where(like(openLoops.title, pattern))
+        sb
+          .from('open_loops')
+          .select('id, title, body')
+          .eq('user_id', userId)
+          .ilike('title', pattern)
           .limit(10),
-        db
-          .select({ id: guideItems.id, title: guideItems.title, category: guideItems.category })
-          .from(guideItems)
-          .where(and(like(guideItems.title, pattern), isNull(guideItems.deletedAt)))
+        sb
+          .from('guide_items')
+          .select('id, title, category')
+          .eq('user_id', userId)
+          .is('deleted_at', null)
+          .ilike('title', pattern)
           .limit(10),
-        db
-          .select({ id: strategies.id, title: strategies.title, category: strategies.category })
-          .from(strategies)
-          .where(and(like(strategies.title, pattern), isNull(strategies.deletedAt)))
+        sb
+          .from('strategies')
+          .select('id, title, category')
+          .eq('user_id', userId)
+          .is('deleted_at', null)
+          .ilike('title', pattern)
           .limit(10),
       ]);
 
       const all: SearchResult[] = [
-        ...matchedActions.map((r) => ({
+        ...(matchedActions ?? []).map((r: { id: string; title: string; notes: string | null }) => ({
           id: r.id,
           type: 'Action' as ResultType,
           title: r.title,
           subtitle: r.notes ?? undefined,
         })),
-        ...matchedRoutines.map((r) => ({
+        ...(matchedRoutines ?? []).map((r: { id: string; title: string; category: string }) => ({
           id: r.id,
           type: 'Routine' as ResultType,
           title: r.title,
           subtitle: r.category ?? undefined,
         })),
-        ...matchedOpenLoops.map((r) => ({
+        ...(matchedOpenLoops ?? []).map((r: { id: string; title: string; body: string | null }) => ({
           id: r.id,
           type: 'Open Loop' as ResultType,
           title: r.title,
           subtitle: r.body ?? undefined,
         })),
-        ...matchedGuideItems.map((r) => ({
+        ...(matchedGuideItems ?? []).map((r: { id: string; title: string; category: string }) => ({
           id: r.id,
           type: 'Guide Item' as ResultType,
           title: r.title,
           subtitle: r.category ?? undefined,
         })),
-        ...matchedStrategies.map((r) => ({
+        ...(matchedStrategies ?? []).map((r: { id: string; title: string; category: string }) => ({
           id: r.id,
           type: 'Strategy' as ResultType,
           title: r.title,

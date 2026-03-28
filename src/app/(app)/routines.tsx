@@ -2,8 +2,9 @@ import { useState, useMemo, useCallback } from 'react';
 import { View, Text, FlatList, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, borderRadius } from '@/lib/theme';
-import { SegmentedControl, EmptyState } from '@/components/ui';
+import { SegmentedControl, EmptyState, TabSwipePager } from '@/components/ui';
 import { RoutineCard } from '@/components/cards/RoutineCard';
+import { RoutineFormSheet } from '@/components/sheets';
 import { useRoutineTemplates } from '@/features/routines/hooks/useRoutines';
 import { LifeCategory } from '@/lib/constants';
 import type { RecurrenceType, Session } from '@/lib/constants';
@@ -39,6 +40,7 @@ const CATEGORY_VALUES: (string | null)[] = [
 interface TemplateRow {
   id: string;
   title: string;
+  notes: string | null;
   category: string;
   defaultSession: string | null;
   recurrenceType: string;
@@ -49,28 +51,43 @@ interface TemplateRow {
 
 export default function RoutinesScreen() {
   const [selectedTab, setSelectedTab] = useState(0); // Default to "All"
-  const { data: templates, isLoading } = useRoutineTemplates();
+  const { data: templates } = useRoutineTemplates();
+  const [routineSheetOpen, setRoutineSheetOpen] = useState(false);
+  const [editTemplate, setEditTemplate] = useState<TemplateRow | null>(null);
 
-  const filteredTemplates = useMemo(() => {
-    if (!templates) return [];
+  const filteredByCategoryTab = useMemo(() => {
+    if (!templates) return CATEGORY_TABS.map(() => [] as TemplateRow[]);
     const rows = templates as TemplateRow[];
-    const categoryFilter = CATEGORY_VALUES[selectedTab];
-
-    if (categoryFilter === null) {
-      // "All" tab - show everything
-      return rows.filter((t) => !t.deletedAt);
-    }
-
-    return rows.filter((t) => !t.deletedAt && t.category === categoryFilter);
-  }, [templates, selectedTab]);
+    return CATEGORY_TABS.map((_, i) => {
+      const categoryFilter = CATEGORY_VALUES[i];
+      if (categoryFilter === null) {
+        return rows.filter((t) => !t.deletedAt);
+      }
+      return rows.filter((t) => !t.deletedAt && t.category === categoryFilter);
+    });
+  }, [templates]);
 
   const handleCreateRoutine = useCallback(() => {
-    console.log('Create routine pressed');
+    setEditTemplate(null);
+    setRoutineSheetOpen(true);
+  }, []);
+
+  const handleEditRoutine = useCallback((item: TemplateRow) => {
+    setEditTemplate(item);
+    setRoutineSheetOpen(true);
+  }, []);
+
+  const handleRoutineSheetDismiss = useCallback(() => {
+    setRoutineSheetOpen(false);
+    setEditTemplate(null);
   }, []);
 
   const renderItem = useCallback(
     ({ item }: { item: TemplateRow }) => (
-      <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
+      <Pressable
+        onPress={() => handleEditRoutine(item)}
+        style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}
+      >
         <RoutineCard
           id={item.id}
           title={item.title}
@@ -80,16 +97,17 @@ export default function RoutinesScreen() {
           recurrenceDaysJson={item.recurrenceDaysJson}
           isActive={item.isActive ?? true}
         />
-      </View>
+      </Pressable>
     ),
-    [],
+    [handleEditRoutine],
   );
 
-  const selectedCategory = CATEGORY_VALUES[selectedTab];
-  const emptyMessage =
-    selectedCategory === null
+  const emptyMessageForTab = (tabIdx: number) => {
+    const selectedCategory = CATEGORY_VALUES[tabIdx];
+    return selectedCategory === null
       ? 'No routines yet. Build your rhythm here.'
-      : `No ${CATEGORY_TABS[selectedTab].toLowerCase()} routines yet.`;
+      : `No ${CATEGORY_TABS[tabIdx].toLowerCase()} routines yet.`;
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -117,25 +135,34 @@ export default function RoutinesScreen() {
         />
       </View>
 
-      {/* Routines list */}
-      <FlatList
-        data={filteredTemplates}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={{
-          paddingBottom: spacing['3xl'] + 60,
-          ...(filteredTemplates.length === 0 ? { flex: 1, justifyContent: 'center' as const } : {}),
-        }}
-        ListEmptyComponent={
-          <View style={{ paddingHorizontal: spacing.lg }}>
-            <EmptyState
-              message={emptyMessage}
-              accentColor={colors.routines.primary}
-            />
-          </View>
-        }
-        showsVerticalScrollIndicator={false}
-      />
+      <TabSwipePager selectedIndex={selectedTab} onIndexChange={setSelectedTab} style={{ flex: 1 }}>
+        {CATEGORY_TABS.map((_, tabIdx) => {
+          const filteredTemplates = filteredByCategoryTab[tabIdx] ?? [];
+          return (
+            <View key={CATEGORY_TABS[tabIdx]} style={{ flex: 1 }} collapsable={false}>
+              <FlatList
+                data={filteredTemplates}
+                keyExtractor={(item) => item.id}
+                renderItem={renderItem}
+                nestedScrollEnabled
+                contentContainerStyle={{
+                  paddingBottom: spacing['3xl'] + 60,
+                  ...(filteredTemplates.length === 0 ? { flex: 1, justifyContent: 'center' as const } : {}),
+                }}
+                ListEmptyComponent={
+                  <View style={{ paddingHorizontal: spacing.lg }}>
+                    <EmptyState
+                      message={emptyMessageForTab(tabIdx)}
+                      accentColor={colors.routines.primary}
+                    />
+                  </View>
+                }
+                showsVerticalScrollIndicator={false}
+              />
+            </View>
+          );
+        })}
+      </TabSwipePager>
 
       {/* FAB */}
       <Pressable
@@ -162,6 +189,25 @@ export default function RoutinesScreen() {
           +
         </Text>
       </Pressable>
+
+      {/* Form Sheet */}
+      <RoutineFormSheet
+        visible={routineSheetOpen}
+        onDismiss={handleRoutineSheetDismiss}
+        editId={editTemplate?.id}
+        editData={
+          editTemplate
+            ? {
+                title: editTemplate.title,
+                notes: editTemplate.notes ?? undefined,
+                category: editTemplate.category as any,
+                defaultSession: editTemplate.defaultSession as any,
+                recurrenceType: editTemplate.recurrenceType as any,
+                recurrenceDaysJson: editTemplate.recurrenceDaysJson ?? undefined,
+              }
+            : null
+        }
+      />
     </SafeAreaView>
   );
 }

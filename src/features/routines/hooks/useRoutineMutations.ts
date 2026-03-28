@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/db/query-keys';
+import { queryKeys } from '@/lib/query-keys';
 import * as routineQueries from '../db/routine-queries';
 import { generateInstancesForWindow } from '../db/instance-generation';
 import type { RoutineTemplateFormData } from '@/lib/validation';
+import type { RoutineTemplate } from '../types';
 
 export function useCreateTemplate() {
   const queryClient = useQueryClient();
@@ -11,9 +12,12 @@ export function useCreateTemplate() {
     mutationFn: (data: RoutineTemplateFormData) => routineQueries.createTemplate(data),
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.routineTemplates.all });
-      // Trigger instance generation for new template
-      const templates = await routineQueries.getActiveTemplates();
-      await generateInstancesForWindow(templates, new Date(), 14);
+      try {
+        const templates = (await routineQueries.getActiveTemplates()) as RoutineTemplate[];
+        await generateInstancesForWindow(templates, new Date(), 14);
+      } catch (e) {
+        console.error('Failed to generate routine instances after create', e);
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.routineInstances.all });
     },
   });
