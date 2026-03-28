@@ -181,17 +181,17 @@ export function FloatingTabBar({
         })}
       </View>
 
-      {/* Plus button — sits to the right of the tab pill */}
+      {/* Plus button — sits to the right of the tab pill, matches pill height */}
       <Pressable
         onPress={onPlusPress}
         accessibilityRole="button"
         accessibilityLabel="Create new"
         style={({ pressed }: { pressed: boolean }) => [
           {
-            width: 52,
-            height: 52,
+            width: 64,
+            height: 64,
             borderRadius: borderRadius.full,
-            backgroundColor: colors.surfaceRaised,
+            backgroundColor: colors.surface,
             borderWidth: 1,
             borderColor: colors.border,
             alignItems: 'center' as const,
@@ -204,7 +204,7 @@ export function FloatingTabBar({
         <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
           <Path
             d="M12 5v14M5 12h14"
-            stroke={colors.text.primary}
+            stroke={colors.text.muted}
             strokeWidth={2}
             strokeLinecap="round"
           />
