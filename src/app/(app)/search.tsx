@@ -185,7 +185,7 @@ export default function SearchScreen() {
         <TextInput
           style={styles.input}
           placeholder="Search actions, routines, guide items..."
-          placeholderTextColor={colors.text.muted}
+          placeholderTextColor={colors.text.secondary}
           value={query}
           onChangeText={handleChangeText}
           autoFocus
@@ -286,6 +286,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: fontSize.base,
-    color: colors.text.muted,
+    color: colors.text.secondary,
   },
 });

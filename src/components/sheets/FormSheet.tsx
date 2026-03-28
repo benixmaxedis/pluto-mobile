@@ -75,7 +75,7 @@ export const FormSheet = forwardRef<FormSheetRef, FormSheetProps>(
               style={{
                 width: 40,
                 height: 4,
-                backgroundColor: colors.text.muted,
+                backgroundColor: colors.border,
                 borderRadius: borderRadius.full,
               }}
             />

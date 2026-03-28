@@ -7,34 +7,14 @@ export default function AppLayout() {
     <Tabs
       tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
-        headerStyle: { backgroundColor: colors.background },
-        headerTintColor: colors.text.primary,
-        headerShadowVisible: false,
+        headerShown: false,
       }}
     >
-      <Tabs.Screen
-        name="now"
-        options={{
-          title: 'Now',
-          headerShown: false,
-        }}
-      />
-      <Tabs.Screen
-        name="actions"
-        options={{ title: 'Actions' }}
-      />
-      <Tabs.Screen
-        name="routines"
-        options={{ title: 'Routines' }}
-      />
-      <Tabs.Screen
-        name="capture"
-        options={{ title: 'Capture' }}
-      />
-      <Tabs.Screen
-        name="guide"
-        options={{ title: 'Guide' }}
-      />
+      <Tabs.Screen name="actions" options={{ title: 'Actions' }} />
+      <Tabs.Screen name="routines" options={{ title: 'Routines' }} />
+      <Tabs.Screen name="now" options={{ title: 'Now' }} />
+      <Tabs.Screen name="capture" options={{ title: 'Capture' }} />
+      <Tabs.Screen name="guide" options={{ title: 'Guide' }} />
       {/* Secondary routes — hidden from tab bar */}
       <Tabs.Screen name="activity" options={{ href: null }} />
       <Tabs.Screen name="pluto" options={{ href: null }} />

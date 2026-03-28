@@ -34,6 +34,7 @@ export function useCompleteAction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
       queryClient.invalidateQueries({ queryKey: ['queue'] });
+      queryClient.invalidateQueries({ queryKey: ['now-session-history'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.activityEvents.all });
     },
   });
@@ -47,6 +48,7 @@ export function useSkipAction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
       queryClient.invalidateQueries({ queryKey: ['queue'] });
+      queryClient.invalidateQueries({ queryKey: ['now-session-history'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.activityEvents.all });
     },
   });
@@ -68,6 +70,7 @@ export function useSnoozeAction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
       queryClient.invalidateQueries({ queryKey: ['queue'] });
+      queryClient.invalidateQueries({ queryKey: ['now-session-history'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.activityEvents.all });
     },
   });
@@ -89,6 +92,7 @@ export function useMoveAction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
       queryClient.invalidateQueries({ queryKey: ['queue'] });
+      queryClient.invalidateQueries({ queryKey: ['now-session-history'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.activityEvents.all });
     },
   });

@@ -107,7 +107,7 @@ function GuideIcon({ color, size }: { color: string; size: number }) {
 type IconComponent = (props: { color: string; size: number }) => React.ReactElement;
 
 const TAB_CONFIG: Record<string, { label: string; accent: string; Icon: IconComponent }> = {
-  now: { label: 'Now', accent: colors.text.primary, Icon: NowIcon },
+  now: { label: 'Now', accent: colors.emphasis.primary, Icon: NowIcon },
   actions: { label: 'Actions', accent: colors.actions.primary, Icon: ActionsIcon },
   routines: { label: 'Routines', accent: colors.routines.primary, Icon: RoutinesIcon },
   capture: { label: 'Capture', accent: colors.capture.primary, Icon: CaptureIcon },

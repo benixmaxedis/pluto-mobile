@@ -3,6 +3,7 @@ import { View, Text, FlatList, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, borderRadius } from '@/lib/theme';
 import { SegmentedControl, EmptyState, TabSwipePager } from '@/components/ui';
+import { ScreenTabHeader } from '@/components/navigation/ScreenTabHeader';
 import { RoutineCard } from '@/components/cards/RoutineCard';
 import { RoutineFormSheet } from '@/components/sheets';
 import { useRoutineTemplates } from '@/features/routines/hooks/useRoutines';
@@ -67,6 +68,10 @@ export default function RoutinesScreen() {
     });
   }, [templates]);
 
+  const routineCount = filteredByCategoryTab[selectedTab]?.length ?? 0;
+  const routineCountLabel =
+    routineCount === 1 ? '1 routine' : `${routineCount} routines`;
+
   const handleCreateRoutine = useCallback(() => {
     setEditTemplate(null);
     setRoutineSheetOpen(true);
@@ -111,29 +116,16 @@ export default function RoutinesScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Header */}
-      <View style={{ padding: spacing.lg, paddingBottom: spacing.md }}>
-        <Text
-          style={{
-            fontSize: fontSize['2xl'],
-            fontWeight: '700',
-            color: colors.text.primary,
-          }}
-        >
-          Routines
-        </Text>
-      </View>
-
-      {/* Category tabs */}
-      <View style={{ paddingBottom: spacing.md }}>
+      <ScreenTabHeader title="Routines" trailing={routineCountLabel}>
         <SegmentedControl
           segments={CATEGORY_TABS}
           selectedIndex={selectedTab}
           onSelect={setSelectedTab}
           accentColor={colors.routines.primary}
           scrollable
+          selectionStyle="neutral"
         />
-      </View>
+      </ScreenTabHeader>
 
       <TabSwipePager selectedIndex={selectedTab} onIndexChange={setSelectedTab} style={{ flex: 1 }}>
         {CATEGORY_TABS.map((_, tabIdx) => {

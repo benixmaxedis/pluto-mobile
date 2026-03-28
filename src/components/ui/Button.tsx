@@ -1,5 +1,5 @@
 import { Pressable, Text, ActivityIndicator, type PressableProps } from 'react-native';
-import { colors, borderRadius, spacing, fontSize } from '@/lib/theme';
+import { colors, borderRadius, spacing, fontSize, typographyStyles } from '@/lib/theme';
 
 interface ButtonProps extends PressableProps {
   title: string;
@@ -22,8 +22,8 @@ export function Button({
   const isPrimary = variant === 'primary';
   const isGhost = variant === 'ghost';
 
-  const paddingY = size === 'sm' ? spacing.sm : size === 'lg' ? spacing.lg : spacing.md;
-  const paddingX = size === 'sm' ? spacing.md : size === 'lg' ? spacing['2xl'] : spacing.lg;
+  const paddingY = size === 'sm' ? 6 : size === 'lg' ? spacing.sm : 8;
+  const paddingX = size === 'sm' ? spacing.sm : size === 'lg' ? spacing.xl : spacing.md;
   const textSize = size === 'sm' ? fontSize.sm : size === 'lg' ? fontSize.md : fontSize.base;
 
   return (
@@ -52,8 +52,10 @@ export function Button({
       ) : (
         <Text
           style={{
+            fontFamily: typographyStyles.button.fontFamily,
             fontSize: textSize,
-            fontWeight: '600',
+            letterSpacing: typographyStyles.button.letterSpacing,
+            lineHeight: size === 'sm' ? 16 : size === 'lg' ? 22 : 18,
             color: isPrimary ? colors.background : isGhost ? accentColor : colors.text.primary,
           }}
         >

@@ -1,6 +1,8 @@
 import { View, Text, Pressable } from 'react-native';
 import { Card } from '@/components/ui';
-import { colors, spacing, fontSize } from '@/lib/theme';
+import { colors, spacing, fontSize, borderRadius } from '@/lib/theme';
+
+const STATUS_DOT = 12;
 
 interface JournalCardProps {
   type: 'morning' | 'evening';
@@ -17,18 +19,14 @@ export function JournalCard({ type, isCompleted, onPress }: JournalCardProps) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <View
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: isCompleted ? `${colors.success}22` : `${colors.capture.primary}22`,
-              alignItems: 'center',
-              justifyContent: 'center',
+              width: STATUS_DOT,
+              height: STATUS_DOT,
+              borderRadius: borderRadius.full,
+              backgroundColor: isCompleted ? colors.success : 'transparent',
+              borderWidth: isCompleted ? 0 : 1.5,
+              borderColor: colors.border,
             }}
-          >
-            <Text style={{ fontSize: fontSize.md }}>
-              {isCompleted ? '\u2713' : '\u270E'}
-            </Text>
-          </View>
+          />
           <View style={{ flex: 1 }}>
             <Text
               style={{
@@ -39,17 +37,8 @@ export function JournalCard({ type, isCompleted, onPress }: JournalCardProps) {
             >
               {label}
             </Text>
-            <Text
-              style={{
-                fontSize: fontSize.sm,
-                color: isCompleted ? colors.success : colors.text.muted,
-                marginTop: 2,
-              }}
-            >
-              {isCompleted ? 'Completed' : 'Not yet completed'}
-            </Text>
           </View>
-          <Text style={{ fontSize: fontSize.md, color: colors.text.muted }}>{'\u203A'}</Text>
+          <Text style={{ fontSize: fontSize.md, color: colors.text.secondary }}>{'\u203A'}</Text>
         </View>
       </Card>
     </Pressable>

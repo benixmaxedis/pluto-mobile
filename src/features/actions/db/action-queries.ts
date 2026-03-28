@@ -88,6 +88,19 @@ export async function getActionsForQueue(date: string) {
   return camelRows((data ?? []) as Record<string, unknown>[]) as Action[];
 }
 
+export async function getTerminalActionsForDate(date: string): Promise<Action[]> {
+  const userId = await uid();
+  const { data, error } = await getSupabase()
+    .from('actions')
+    .select('*')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .in('status', ['completed', 'skipped'])
+    .or(`scheduled_date.eq.${date},effective_date.eq.${date}`);
+  if (error) throw error;
+  return camelRows((data ?? []) as Record<string, unknown>[]) as Action[];
+}
+
 export async function getSubtasksForAction(actionId: string) {
   const { data, error } = await getSupabase()
     .from('action_subtasks')

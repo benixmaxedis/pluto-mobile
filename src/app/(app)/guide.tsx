@@ -6,6 +6,7 @@ import { useGuideItems } from '@/features/guide/hooks/useGuideItems';
 import { useStrategies } from '@/features/guide/hooks/useStrategies';
 import { colors, spacing, fontSize, borderRadius } from '@/lib/theme';
 import { EmptyState, SegmentedControl, TabSwipePager } from '@/components/ui';
+import { ScreenTabHeader } from '@/components/navigation/ScreenTabHeader';
 import { GuideItemCard } from '@/components/cards/GuideItemCard';
 import { StrategyCard } from '@/components/cards/StrategyCard';
 import { GuideItemFormSheet, StrategyFormSheet } from '@/components/sheets';
@@ -83,24 +84,15 @@ export default function GuideScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-      <View style={{ padding: spacing.lg, paddingBottom: spacing.sm }}>
-        <Text
-          style={{
-            fontSize: fontSize.xl,
-            fontWeight: '700',
-            color: colors.text.primary,
-            marginBottom: spacing.md,
-          }}
-        >
-          Guide
-        </Text>
+      <ScreenTabHeader title="Guide">
         <SegmentedControl
           segments={SECTIONS}
           selectedIndex={selectedSection}
           onSelect={setSelectedSection}
           accentColor={accentColor}
+          selectionStyle="neutral"
         />
-      </View>
+      </ScreenTabHeader>
 
       <TabSwipePager
         selectedIndex={selectedSection}
@@ -108,7 +100,7 @@ export default function GuideScreen() {
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1 }} collapsable={false}>
-          <View style={{ marginTop: spacing.sm, marginBottom: spacing.md }}>
+          <View style={{ marginBottom: spacing.md }}>
             <SegmentedControl
               segments={GUIDE_CATEGORY_LABELS}
               selectedIndex={guideCategoryIndex}
@@ -189,7 +181,7 @@ export default function GuideScreen() {
         </View>
 
         <View style={{ flex: 1 }} collapsable={false}>
-          <View style={{ marginTop: spacing.sm, marginBottom: spacing.md }}>
+          <View style={{ marginBottom: spacing.md }}>
             <SegmentedControl
               segments={STRATEGY_CATEGORY_LABELS}
               selectedIndex={strategyCategoryIndex}
