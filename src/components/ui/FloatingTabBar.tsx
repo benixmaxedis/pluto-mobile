@@ -5,6 +5,10 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { colors, shadows, borderRadius } from '@/lib/theme';
 
+export interface FloatingTabBarExtraProps {
+  onPlusPress?: () => void;
+}
+
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
 function TodayIcon({ color, size }: { color: string; size: number }) {
@@ -75,7 +79,12 @@ const TAB_CONFIG: Record<string, { label: string; accent: string; Icon: IconComp
 
 // ── FloatingTabBar ─────────────────────────────────────────────────────────────
 
-export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export function FloatingTabBar({
+  state,
+  descriptors,
+  navigation,
+  onPlusPress,
+}: BottomTabBarProps & FloatingTabBarExtraProps) {
   const insets = useSafeAreaInsets();
 
   const visibleRoutes = state.routes.filter((route) => route.name in TAB_CONFIG);
@@ -88,11 +97,16 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         bottom: insets.bottom + 12,
         left: 20,
         right: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
       }}
     >
+      {/* Tab pill */}
       <View
         style={[
           {
+            flex: 1,
             flexDirection: 'row',
             backgroundColor: colors.surface,
             borderRadius: borderRadius.full,
@@ -166,6 +180,36 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           );
         })}
       </View>
+
+      {/* Plus button — sits to the right of the tab pill */}
+      <Pressable
+        onPress={onPlusPress}
+        accessibilityRole="button"
+        accessibilityLabel="Create new"
+        style={({ pressed }: { pressed: boolean }) => [
+          {
+            width: 52,
+            height: 52,
+            borderRadius: borderRadius.full,
+            backgroundColor: colors.surfaceRaised,
+            borderWidth: 1,
+            borderColor: colors.border,
+            alignItems: 'center' as const,
+            justifyContent: 'center' as const,
+            opacity: pressed ? 0.7 : 1,
+          },
+          shadows.lg,
+        ]}
+      >
+        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M12 5v14M5 12h14"
+            stroke={colors.text.primary}
+            strokeWidth={2}
+            strokeLinecap="round"
+          />
+        </Svg>
+      </Pressable>
     </View>
   );
 }

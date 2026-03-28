@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { FloatingTabBar } from '@/components/ui/FloatingTabBar';
-import { CreateFAB } from '@/components/ui/CreateFAB';
 import { CreateDrawer } from '@/components/ui/CreateDrawer';
 
 export default function AppLayout() {
   const [drawerVisible, setDrawerVisible] = useState(false);
 
   return (
-    <View style={{ flex: 1 }}>
+    <>
       <Tabs
-        tabBar={(props) => <FloatingTabBar {...props} />}
+        tabBar={(props) => (
+          <FloatingTabBar {...props} onPlusPress={() => setDrawerVisible(true)} />
+        )}
         screenOptions={{ headerShown: false }}
       >
         <Tabs.Screen name="today" options={{ title: 'Today' }} />
@@ -29,8 +29,7 @@ export default function AppLayout() {
         <Tabs.Screen name="search" options={{ href: null }} />
       </Tabs>
 
-      <CreateFAB onPress={() => setDrawerVisible(true)} />
       <CreateDrawer visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
-    </View>
+    </>
   );
 }
