@@ -6,3 +6,4 @@ export { EmptyState } from './EmptyState';
 export { IconButton } from './IconButton';
 export { SegmentedControl } from './SegmentedControl';
 export { TextInput } from './TextInput';
+export { FloatingTabBar } from './FloatingTabBar';
