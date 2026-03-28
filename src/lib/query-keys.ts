@@ -42,6 +42,9 @@ export const queryKeys = {
   queue: {
     forSession: (date: string, session: string) => ['queue', date, session] as const,
   },
+  now: {
+    sessionHistory: (date: string, session: string) => ['now-session-history', date, session] as const,
+  },
   momentumChains: {
     all: ['momentum-chains'] as const,
     byId: (id: string) => ['momentum-chains', id] as const,

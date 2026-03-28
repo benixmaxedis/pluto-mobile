@@ -8,6 +8,7 @@ import { useJournalEntriesByDate } from '@/features/capture/hooks/useJournal';
 import { toISODate } from '@/lib/utils/date';
 import { colors, spacing, fontSize, borderRadius } from '@/lib/theme';
 import { Card, EmptyState, SegmentedControl, TextInput, Button, TabSwipePager } from '@/components/ui';
+import { ScreenTabHeader } from '@/components/navigation/ScreenTabHeader';
 import { OpenLoopCard } from '@/components/cards/OpenLoopCard';
 import { JournalCard } from '@/components/cards/JournalCard';
 import { ConvertOpenLoopSheet, JournalFormSheet } from '@/components/sheets';
@@ -76,24 +77,15 @@ export default function CaptureScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={{ padding: spacing.lg, paddingBottom: spacing.sm }}>
-          <Text
-            style={{
-              fontSize: fontSize.xl,
-              fontWeight: '700',
-              color: colors.text.primary,
-              marginBottom: spacing.md,
-            }}
-          >
-            Capture
-          </Text>
+        <ScreenTabHeader title="Capture">
           <SegmentedControl
             segments={SEGMENTS}
             selectedIndex={selectedSegment}
             onSelect={setSelectedSegment}
             accentColor={colors.capture.primary}
+            selectionStyle="neutral"
           />
-        </View>
+        </ScreenTabHeader>
 
         <TabSwipePager
           selectedIndex={selectedSegment}
@@ -106,7 +98,7 @@ export default function CaptureScreen() {
                 flexDirection: 'row',
                 gap: spacing.sm,
                 marginBottom: spacing.md,
-                marginTop: spacing.sm,
+                marginTop: spacing.xs,
               }}
             >
               <View style={{ flex: 1 }}>
@@ -116,7 +108,6 @@ export default function CaptureScreen() {
                   onChangeText={setInputText}
                   onSubmitEditing={handleSubmit}
                   returnKeyType="done"
-                  autoFocus={selectedSegment === 0}
                 />
               </View>
               <Button

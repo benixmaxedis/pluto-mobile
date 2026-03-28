@@ -1,7 +1,8 @@
 import { View, Text } from 'react-native';
 import { Card, Badge, Button } from '@/components/ui';
-import { colors, spacing, fontSize, borderRadius } from '@/lib/theme';
+import { borderRadius, colors, spacing, typographyStyles } from '@/lib/theme';
 import type { QueueItem } from '@/features/queue/engine/queue-builder';
+import { isJournalQueueItem } from '@/features/queue/journal-queue';
 
 interface FocusCardProps {
   item: QueueItem;
@@ -20,62 +21,39 @@ export function FocusCard({
   onSnooze,
   onMove,
 }: FocusCardProps) {
+  const isJournal = isJournalQueueItem(item);
   const isAction = item.type === 'action';
-  const accentColor = isAction ? colors.actions.primary : colors.routines.primary;
-  const typeBadgeLabel = isAction ? 'Action' : 'Routine';
+  const accentColor = isJournal
+    ? colors.capture.primary
+    : isAction
+      ? colors.actions.primary
+      : colors.routines.primary;
+  const typeBadgeLabel = isJournal ? 'Journal' : isAction ? 'Action' : 'Routine';
 
   return (
-    <Card variant="elevated" accentColor={accentColor}>
-      <View style={{ gap: spacing.lg }}>
-        {/* Header row: type badge + priority */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <Badge label={typeBadgeLabel} color={accentColor} size="md" />
-          {item.priority === 'high' && (
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spacing.xs,
-              }}
-            >
-              <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: borderRadius.full,
-                  backgroundColor: colors.warning,
-                }}
-              />
-              <Text style={{ fontSize: fontSize.xs, color: colors.warning, fontWeight: '600' }}>
-                High Priority
-              </Text>
-            </View>
-          )}
-          {item.isOverdue && (
-            <Badge label="Overdue" color={colors.error} size="sm" />
-          )}
+    <Card variant="elevated">
+      <View style={{ gap: spacing.md }}>
+        <View style={{ gap: spacing.xs }}>
+          <Text style={[typographyStyles.label, { color: colors.text.secondary }]}>{typeBadgeLabel}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+            {item.priority === 'high' && (
+              <Badge label="High priority" color={colors.warning} size="sm" variant="soft" />
+            )}
+            {item.isOverdue && (
+              <Badge label="Overdue" color={colors.error} size="sm" variant="soft" />
+            )}
+          </View>
         </View>
 
-        {/* Title */}
-        <Text
-          style={{
-            fontSize: fontSize.xl,
-            fontWeight: '700',
-            color: colors.text.primary,
-            lineHeight: 30,
-          }}
-        >
-          {item.title}
-        </Text>
+        <Text style={[typographyStyles.heading1, { color: colors.text.primary }]}>{item.title}</Text>
 
-        {/* Subtask progress */}
         {subtaskProgress && subtaskProgress.total > 0 && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <View
               style={{
                 flex: 1,
                 height: 4,
-                backgroundColor: colors.border,
+                backgroundColor: colors.borderSubtle,
                 borderRadius: borderRadius.full,
                 overflow: 'hidden',
               }}
@@ -89,44 +67,47 @@ export function FocusCard({
                 }}
               />
             </View>
-            <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary, fontWeight: '600' }}>
+            <Text style={[typographyStyles.caption, { color: colors.text.secondary }]}>
               {subtaskProgress.completed}/{subtaskProgress.total}
             </Text>
           </View>
         )}
 
-        {/* Action buttons */}
-        <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center', marginTop: spacing.xs }}>
           <View style={{ flex: 1 }}>
             <Button
-              title="Complete"
+              title={isJournal ? 'Open journal' : 'Complete'}
               variant="primary"
               size="md"
               accentColor={accentColor}
               onPress={() => onComplete(item.id)}
             />
           </View>
-          <Button
-            title="Skip"
-            variant="ghost"
-            size="sm"
-            accentColor={colors.text.secondary}
-            onPress={() => onSkip(item.id)}
-          />
-          <Button
-            title="Snooze"
-            variant="ghost"
-            size="sm"
-            accentColor={colors.text.secondary}
-            onPress={() => onSnooze(item.id)}
-          />
-          <Button
-            title="Move"
-            variant="ghost"
-            size="sm"
-            accentColor={colors.text.secondary}
-            onPress={() => onMove(item.id)}
-          />
+          {!isJournal && (
+            <>
+              <Button
+                title="Skip"
+                variant="ghost"
+                size="sm"
+                accentColor={colors.text.secondary}
+                onPress={() => onSkip(item.id)}
+              />
+              <Button
+                title="Snooze"
+                variant="ghost"
+                size="sm"
+                accentColor={colors.text.secondary}
+                onPress={() => onSnooze(item.id)}
+              />
+              <Button
+                title="Move"
+                variant="ghost"
+                size="sm"
+                accentColor={colors.text.secondary}
+                onPress={() => onMove(item.id)}
+              />
+            </>
+          )}
         </View>
       </View>
     </Card>

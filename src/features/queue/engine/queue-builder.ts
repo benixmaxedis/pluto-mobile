@@ -1,8 +1,10 @@
 import type { Session } from '@/lib/constants';
 
+export type QueueItemType = 'action' | 'routine_instance' | 'journal_morning' | 'journal_evening';
+
 export interface QueueItem {
   id: string;
-  type: 'action' | 'routine_instance';
+  type: QueueItemType;
   title: string;
   session: Session | null;
   priority: 'normal' | 'high';

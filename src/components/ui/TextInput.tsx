@@ -15,7 +15,7 @@ export function TextInput({ label, error, style, ...props }: TextInputProps) {
         </Text>
       )}
       <RNTextInput
-        placeholderTextColor={colors.text.muted}
+        placeholderTextColor={colors.text.secondary}
         style={[
           {
             backgroundColor: colors.surface,

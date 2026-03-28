@@ -31,6 +31,7 @@ export function useSaveJournal() {
     }) => journalQueries.upsertJournalEntry(date, type, answers),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.journal.all });
+      queryClient.invalidateQueries({ queryKey: ['queue'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.activityEvents.all });
     },
   });

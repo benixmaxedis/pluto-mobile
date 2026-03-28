@@ -84,7 +84,7 @@ export function RoutineCard({
             >
               {title}
             </Text>
-            {!isActive && <Badge label="Inactive" color={colors.text.muted} size="sm" />}
+            {!isActive && <Badge label="Inactive" color={colors.text.secondary} size="sm" />}
           </View>
 
           {/* Meta row */}
@@ -101,7 +101,7 @@ export function RoutineCard({
                 size="sm"
               />
             )}
-            <Text style={{ fontSize: fontSize.sm, color: colors.text.muted }}>
+            <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary }}>
               {formatRecurrenceSummary(recurrenceType, recurrenceDaysJson)}
             </Text>
           </View>

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { type FormSheetRef } from '@/components/sheets/FormSheet';
 import { colors, spacing, fontSize, borderRadius } from '@/lib/theme';
 import { SegmentedControl, EmptyState, TabSwipePager } from '@/components/ui';
+import { ScreenTabHeader } from '@/components/navigation/ScreenTabHeader';
 import { ActionCard } from '@/components/cards/ActionCard';
 import { ActionFormSheet } from '@/components/sheets';
 import { useActions } from '@/features/actions/hooks/useActions';
@@ -175,6 +176,10 @@ export default function ActionsScreen() {
     return TAB_LABELS.map((_, i) => filterActionsByTab(rows, i));
   }, [actions]);
 
+  const actionCount = filteredByTab[selectedTab]?.length ?? 0;
+  const actionCountLabel =
+    actionCount === 1 ? '1 action' : `${actionCount} actions`;
+
   const handleCreateAction = useCallback(() => {
     setEditAction(null);
     formSheetRef.current?.present();
@@ -217,29 +222,16 @@ export default function ActionsScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Header */}
-      <View style={{ padding: spacing.lg, paddingBottom: spacing.md }}>
-        <Text
-          style={{
-            fontSize: fontSize['2xl'],
-            fontWeight: '700',
-            color: colors.text.primary,
-          }}
-        >
-          Actions
-        </Text>
-      </View>
-
-      {/* Tab bar */}
-      <View style={{ paddingBottom: spacing.md }}>
+      <ScreenTabHeader title="Actions" trailing={actionCountLabel}>
         <SegmentedControl
           segments={TAB_LABELS}
           selectedIndex={selectedTab}
           onSelect={setSelectedTab}
           accentColor={colors.actions.primary}
           scrollable
+          selectionStyle="neutral"
         />
-      </View>
+      </ScreenTabHeader>
 
       <TabSwipePager selectedIndex={selectedTab} onIndexChange={setSelectedTab} style={{ flex: 1 }}>
         {TAB_LABELS.map((_, tabIdx) => {

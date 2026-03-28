@@ -39,7 +39,7 @@ export function OpenLoopCard({ id, title, category, onConvert, onArchive }: Open
               title="Archive"
               variant="ghost"
               size="sm"
-              accentColor={colors.text.muted}
+              accentColor={colors.text.secondary}
               onPress={() => onArchive(id)}
             />
           )}

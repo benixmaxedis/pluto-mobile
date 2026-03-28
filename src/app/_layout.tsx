@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/auth-store';
 import { getSupabase } from '@/lib/supabase/client';
 import { getOrCreateDeviceUserId } from '@/lib/identity/device-user-id';
 import { queryClient } from '@/lib/query-client';
+import { useAppFonts } from '@/lib/theme';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -39,6 +40,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useAppFonts();
+  const [authReady, setAuthReady] = useState(false);
+
   useEffect(() => {
     void (async () => {
       try {
@@ -48,10 +52,21 @@ export default function RootLayout() {
       } catch {
         useAuthStore.getState().setUnauthenticated();
       } finally {
-        void SplashScreen.hideAsync();
+        setAuthReady(true);
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!authReady) return;
+    if (fontsLoaded || fontError) {
+      void SplashScreen.hideAsync();
+    }
+  }, [authReady, fontError, fontsLoaded]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

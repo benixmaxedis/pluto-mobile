@@ -76,7 +76,7 @@ function MorningForm({
 
   return (
     <>
-      <Text style={{ fontSize: fontSize.sm, color: colors.text.muted, fontWeight: '600', textTransform: 'uppercase' }}>
+      <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary, fontWeight: '600', textTransform: 'uppercase' }}>
         I am grateful for...
       </Text>
       {(['gratitude1', 'gratitude2', 'gratitude3'] as const).map((field, i) => (
@@ -99,7 +99,7 @@ function MorningForm({
       <Text
         style={{
           fontSize: fontSize.sm,
-          color: colors.text.muted,
+          color: colors.text.secondary,
           fontWeight: '600',
           textTransform: 'uppercase',
           marginTop: spacing.sm,
@@ -127,7 +127,7 @@ function MorningForm({
       <Text
         style={{
           fontSize: fontSize.sm,
-          color: colors.text.muted,
+          color: colors.text.secondary,
           fontWeight: '600',
           textTransform: 'uppercase',
           marginTop: spacing.sm,
@@ -215,7 +215,7 @@ function EveningForm({
 
   return (
     <>
-      <Text style={{ fontSize: fontSize.sm, color: colors.text.muted, fontWeight: '600', textTransform: 'uppercase' }}>
+      <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary, fontWeight: '600', textTransform: 'uppercase' }}>
         3 amazing things that happened today
       </Text>
       {(['amazing1', 'amazing2', 'amazing3'] as const).map((field, i) => (
@@ -238,7 +238,7 @@ function EveningForm({
       <Text
         style={{
           fontSize: fontSize.sm,
-          color: colors.text.muted,
+          color: colors.text.secondary,
           fontWeight: '600',
           textTransform: 'uppercase',
           marginTop: spacing.sm,

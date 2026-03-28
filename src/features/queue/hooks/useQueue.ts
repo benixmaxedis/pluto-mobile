@@ -1,10 +1,11 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { useAppStore } from '@/store/app-store';
 import { buildQueue, type QueueItem } from '../engine/queue-builder';
 import { getActionsForQueue } from '@/features/actions/db/action-queries';
 import { getPendingInstancesByDate } from '@/features/routines/db/routine-queries';
 import type { Session } from '@/lib/constants';
+import { actionTabSession, routineTabSession } from '../session-attribution';
 
 async function fetchQueue(date: string, session: Session): Promise<QueueItem[]> {
   const [rawActions, rawInstances] = await Promise.all([
@@ -16,7 +17,7 @@ async function fetchQueue(date: string, session: Session): Promise<QueueItem[]> 
     id: a.id,
     type: 'action' as const,
     title: a.title,
-    session: (a.effectiveSession ?? a.scheduledSession ?? null) as Session | null,
+    session: actionTabSession(a),
     priority: (a.priority ?? 'normal') as 'normal' | 'high',
     status: a.status ?? 'pending',
     isOverdue: !!a.effectiveDate && a.effectiveDate < date,
@@ -30,7 +31,7 @@ async function fetchQueue(date: string, session: Session): Promise<QueueItem[]> 
     id: ri.id,
     type: 'routine_instance' as const,
     title: ri.templateTitle || 'Routine',
-    session: (ri.effectiveSession ?? ri.scheduledSession ?? null) as Session | null,
+    session: routineTabSession(ri),
     priority: 'normal' as const,
     status: ri.status ?? 'pending',
     isOverdue: false, // Routine instances don't carry forward
@@ -74,18 +75,3 @@ export function useQueuePreview(count = 5) {
   };
 }
 
-export function useFocusItemForSession(date: string, session: Session) {
-  const queue = useQueueForSession(date, session);
-  return {
-    ...queue,
-    data: queue.data?.[0] ?? null,
-  };
-}
-
-export function useQueuePreviewForSession(date: string, session: Session, count = 5) {
-  const queue = useQueueForSession(date, session);
-  return {
-    ...queue,
-    data: queue.data?.slice(1, count + 1) ?? [],
-  };
-}

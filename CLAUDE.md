@@ -4,7 +4,7 @@
 - Expo SDK 55, React Native 0.83, TypeScript (strict)
 - Expo Router (file-based routing, bottom tabs)
 - Zustand (UI state), TanStack Query (data cache), Drizzle ORM + SQLite (persistence)
-- NativeWind + Tailwind for styling, theme tokens in src/lib/theme/
+- NativeWind + Tailwind for styling, theme tokens in src/lib/theme/ (Plus Jakarta Sans + Michroma display via @expo-google-fonts)
 - Zod for validation, React Hook Form for forms
 - @gorhom/bottom-sheet for sheets/modals
 

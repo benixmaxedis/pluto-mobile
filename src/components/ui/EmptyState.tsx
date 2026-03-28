@@ -32,7 +32,7 @@ export function EmptyState({
       <Text
         style={{
           fontSize: fontSize.base,
-          color: colors.text.muted,
+          color: colors.text.secondary,
           textAlign: 'center',
         }}
       >

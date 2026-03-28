@@ -86,14 +86,14 @@ export function ActionCard({
               />
             )}
             {subtaskProgress && subtaskProgress.total > 0 && (
-              <Text style={{ fontSize: fontSize.sm, color: colors.text.muted }}>
+              <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary }}>
                 {subtaskProgress.completed}/{subtaskProgress.total} subtasks
               </Text>
             )}
             {status !== 'pending' && (
               <Badge
                 label={status.charAt(0).toUpperCase() + status.slice(1)}
-                color={status === 'completed' ? colors.success : colors.text.muted}
+                color={status === 'completed' ? colors.success : colors.text.secondary}
                 size="sm"
               />
             )}

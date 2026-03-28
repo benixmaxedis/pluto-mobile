@@ -54,6 +54,7 @@ export function useCompleteInstance() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.routineInstances.all });
       queryClient.invalidateQueries({ queryKey: ['queue'] });
+      queryClient.invalidateQueries({ queryKey: ['now-session-history'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.activityEvents.all });
     },
   });
@@ -67,6 +68,7 @@ export function useSkipInstance() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.routineInstances.all });
       queryClient.invalidateQueries({ queryKey: ['queue'] });
+      queryClient.invalidateQueries({ queryKey: ['now-session-history'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.activityEvents.all });
     },
   });
@@ -86,6 +88,7 @@ export function useSnoozeInstance() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.routineInstances.all });
       queryClient.invalidateQueries({ queryKey: ['queue'] });
+      queryClient.invalidateQueries({ queryKey: ['now-session-history'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.activityEvents.all });
     },
   });
@@ -105,6 +108,7 @@ export function useMoveInstance() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.routineInstances.all });
       queryClient.invalidateQueries({ queryKey: ['queue'] });
+      queryClient.invalidateQueries({ queryKey: ['now-session-history'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.activityEvents.all });
     },
   });

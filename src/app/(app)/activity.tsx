@@ -11,12 +11,12 @@ import { EventType } from '@/lib/constants';
 const EVENT_META: Record<string, { label: string; icon: string; color: string }> = {
   [EventType.ACTION_CREATED]: { label: 'Action created', icon: '\u271A', color: colors.actions.primary },
   [EventType.ACTION_COMPLETED]: { label: 'Action completed', icon: '\u2713', color: colors.success },
-  [EventType.ACTION_SKIPPED]: { label: 'Action skipped', icon: '\u2192', color: colors.text.muted },
+  [EventType.ACTION_SKIPPED]: { label: 'Action skipped', icon: '\u2192', color: colors.text.secondary },
   [EventType.ACTION_SNOOZED]: { label: 'Action snoozed', icon: '\u23F8', color: colors.warning },
   [EventType.ACTION_AUTO_CARRIED_FORWARD]: { label: 'Action carried forward', icon: '\u21B7', color: colors.info },
   [EventType.ACTION_MOVED]: { label: 'Action moved', icon: '\u2194', color: colors.info },
   [EventType.ROUTINE_COMPLETED]: { label: 'Routine completed', icon: '\u2713', color: colors.routines.primary },
-  [EventType.ROUTINE_SKIPPED]: { label: 'Routine skipped', icon: '\u2192', color: colors.text.muted },
+  [EventType.ROUTINE_SKIPPED]: { label: 'Routine skipped', icon: '\u2192', color: colors.text.secondary },
   [EventType.ROUTINE_SNOOZED]: { label: 'Routine snoozed', icon: '\u23F8', color: colors.warning },
   [EventType.ROUTINE_MOVED]: { label: 'Routine moved', icon: '\u2194', color: colors.routines.primary },
   [EventType.OPEN_LOOP_CREATED]: { label: 'Open loop captured', icon: '\u25CB', color: colors.capture.primary },
@@ -90,7 +90,7 @@ export default function ActivityScreen() {
                 <Text
                   style={{
                     fontSize: fontSize.xs,
-                    color: isSelected ? colors.actions.primary : colors.text.muted,
+                    color: isSelected ? colors.actions.primary : colors.text.secondary,
                     fontWeight: '600',
                   }}
                 >
@@ -124,7 +124,7 @@ export default function ActivityScreen() {
               const meta = EVENT_META[item.eventType] ?? {
                 label: item.eventType,
                 icon: '\u2022',
-                color: colors.text.muted,
+                color: colors.text.secondary,
               };
               const timestamp = item.createdAt
                 ? format(new Date(item.createdAt), 'h:mm a')
@@ -161,7 +161,7 @@ export default function ActivityScreen() {
                       <Text
                         style={{
                           fontSize: fontSize.xs,
-                          color: colors.text.muted,
+                          color: colors.text.secondary,
                           marginTop: 2,
                         }}
                       >

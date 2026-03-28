@@ -7,7 +7,8 @@ interface CardProps extends ViewProps {
 }
 
 export function Card({ variant = 'default', accentColor, style, children, ...props }: CardProps) {
-  const backgroundColor = variant === 'elevated' ? colors.surfaceElevated : colors.surface;
+  const backgroundColor =
+    variant === 'elevated' ? colors.surfaceElevated : colors.surfaceRaised;
   const shadow = variant === 'elevated' ? shadows.md : shadows.sm;
 
   return (
@@ -16,9 +17,9 @@ export function Card({ variant = 'default', accentColor, style, children, ...pro
         {
           backgroundColor,
           borderRadius: borderRadius.lg,
-          padding: spacing.lg,
+          padding: spacing.sm,
           borderWidth: 1,
-          borderColor: accentColor ? `${accentColor}33` : colors.border,
+          borderColor: accentColor ? `${accentColor}24` : colors.borderSubtle,
           ...(shadow as object),
         },
         style,
