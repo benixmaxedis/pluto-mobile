@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { colors, shadows, borderRadius } from '@/lib/theme';
-import { useUIStore } from '@/store/ui-store';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -12,18 +11,8 @@ function TodayIcon({ color, size }: { color: string; size: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Rect x={3} y={4} width={18} height={17} rx={2} stroke={color} strokeWidth={2} />
-      <Path
-        d="M3 9h18"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M8 2v3M16 2v3"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-      />
+      <Path d="M3 9h18" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M8 2v3M16 2v3" stroke={color} strokeWidth={2} strokeLinecap="round" />
       <Path
         d="M8 13h1M12 13h1M16 13h1M8 17h1M12 17h1"
         stroke={color}
@@ -88,14 +77,8 @@ const TAB_CONFIG: Record<string, { label: string; accent: string; Icon: IconComp
 
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const triggerPlus = useUIStore((s) => s.triggerPlus);
-  const plusHandler = useUIStore((s) => s.plusHandler);
 
   const visibleRoutes = state.routes.filter((route) => route.name in TAB_CONFIG);
-
-  // Determine the accent of the active tab for the plus button
-  const activeRoute = state.routes[state.index];
-  const activeAccent = TAB_CONFIG[activeRoute?.name]?.accent ?? colors.text.muted;
 
   return (
     <View
@@ -111,7 +94,6 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         style={[
           {
             flexDirection: 'row',
-            alignItems: 'center',
             backgroundColor: colors.surface,
             borderRadius: borderRadius.full,
             borderWidth: 1,
@@ -122,100 +104,67 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           shadows.lg,
         ]}
       >
-        {/* Tab buttons */}
-        <View style={{ flex: 1, flexDirection: 'row' }}>
-          {visibleRoutes.map((route) => {
-            const routeIndex = state.routes.indexOf(route);
-            const isFocused = state.index === routeIndex;
-            const config = TAB_CONFIG[route.name];
-            if (!config) return null;
+        {visibleRoutes.map((route) => {
+          const routeIndex = state.routes.indexOf(route);
+          const isFocused = state.index === routeIndex;
+          const config = TAB_CONFIG[route.name];
+          if (!config) return null;
 
-            const { label, accent, Icon } = config;
-            const iconColor = isFocused ? accent : colors.text.muted;
+          const { label, accent, Icon } = config;
+          const iconColor = isFocused ? accent : colors.text.muted;
 
-            const onPress = () => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
-              if (!isFocused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
-              }
-            };
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
 
-            const onLongPress = () => {
-              navigation.emit({ type: 'tabLongPress', target: route.key });
-            };
+          const onLongPress = () => {
+            navigation.emit({ type: 'tabLongPress', target: route.key });
+          };
 
-            return (
-              <Pressable
-                key={route.key}
-                onPress={onPress}
-                onLongPress={onLongPress}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: isFocused }}
-                accessibilityLabel={descriptors[route.key].options.tabBarAccessibilityLabel}
-                style={({ pressed }: { pressed: boolean }) => ({
-                  flex: 1,
-                  alignItems: 'center' as const,
-                  justifyContent: 'center' as const,
-                  paddingVertical: 8,
-                  borderRadius: borderRadius.full,
-                  backgroundColor: isFocused
-                    ? accent + '22'
-                    : pressed
-                      ? colors.border + '66'
-                      : 'transparent',
-                })}
+          return (
+            <Pressable
+              key={route.key}
+              onPress={onPress}
+              onLongPress={onLongPress}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isFocused }}
+              accessibilityLabel={descriptors[route.key].options.tabBarAccessibilityLabel}
+              style={({ pressed }: { pressed: boolean }) => ({
+                flex: 1,
+                alignItems: 'center' as const,
+                justifyContent: 'center' as const,
+                paddingVertical: 8,
+                borderRadius: borderRadius.full,
+                backgroundColor: isFocused
+                  ? accent + '22'
+                  : pressed
+                    ? colors.border + '66'
+                    : 'transparent',
+              })}
+            >
+              <Icon color={iconColor} size={20} />
+              <Text
+                style={{
+                  fontSize: 10,
+                  marginTop: 3,
+                  color: iconColor,
+                  fontWeight: isFocused ? '600' : '400',
+                  letterSpacing: 0.2,
+                }}
+                numberOfLines={1}
               >
-                <Icon color={iconColor} size={20} />
-                <Text
-                  style={{
-                    fontSize: 10,
-                    marginTop: 3,
-                    color: iconColor,
-                    fontWeight: isFocused ? '600' : '400',
-                    letterSpacing: 0.2,
-                  }}
-                  numberOfLines={1}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Plus button */}
-        <Pressable
-          onPress={triggerPlus}
-          accessibilityRole="button"
-          accessibilityLabel="Create new"
-          style={({ pressed }: { pressed: boolean }) => ({
-            width: 44,
-            height: 44,
-            borderRadius: borderRadius.full,
-            backgroundColor: plusHandler
-              ? activeAccent + '22'
-              : colors.border + '44',
-            alignItems: 'center' as const,
-            justifyContent: 'center' as const,
-            marginLeft: 4,
-            opacity: pressed ? 0.7 : plusHandler ? 1 : 0.4,
-          })}
-        >
-          <Text
-            style={{
-              fontSize: 22,
-              color: plusHandler ? activeAccent : colors.text.muted,
-              fontWeight: '300',
-              marginTop: -1,
-            }}
-          >
-            +
-          </Text>
-        </Pressable>
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );

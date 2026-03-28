@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { View, Text, FlatList, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { type FormSheetRef } from '@/components/sheets/FormSheet';
@@ -10,7 +10,6 @@ import { RoutineCard } from '@/components/cards/RoutineCard';
 import { ActionFormSheet, RoutineFormSheet } from '@/components/sheets';
 import { useActions } from '@/features/actions/hooks/useActions';
 import { useRoutineTemplates } from '@/features/routines/hooks/useRoutines';
-import { useUIStore } from '@/store/ui-store';
 import { LifeCategory } from '@/lib/constants';
 import { todayISO, toISODate, toComparableDate } from '@/lib/utils/date';
 import {
@@ -216,10 +215,6 @@ export default function ActionsScreen() {
   const [routineSheetOpen, setRoutineSheetOpen] = useState(false);
   const [editTemplate, setEditTemplate] = useState<TemplateRow | null>(null);
 
-  // Register context-aware plus handler
-  const registerPlusHandler = useUIStore((s) => s.registerPlusHandler);
-  const unregisterPlusHandler = useUIStore((s) => s.unregisterPlusHandler);
-
   const handleCreateAction = useCallback(() => {
     setEditAction(null);
     actionFormRef.current?.present();
@@ -229,12 +224,6 @@ export default function ActionsScreen() {
     setEditTemplate(null);
     setRoutineSheetOpen(true);
   }, []);
-
-  useEffect(() => {
-    const handler = selectedSection === 0 ? handleCreateAction : handleCreateRoutine;
-    registerPlusHandler(handler);
-    return () => unregisterPlusHandler();
-  }, [selectedSection, handleCreateAction, handleCreateRoutine, registerPlusHandler, unregisterPlusHandler]);
 
   // ── Actions data ─────────────────────────────────────────────────────────────
 

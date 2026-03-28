@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
+import { useState, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -30,7 +30,6 @@ import {
   JournalFormSheet,
 } from '@/components/sheets';
 import { GuideCategory, LifeCategory } from '@/lib/constants';
-import { useUIStore } from '@/store/ui-store';
 
 // ── Sub-tab labels ─────────────────────────────────────────────────────────────
 
@@ -174,31 +173,6 @@ export default function ReflectScreen() {
     setJournalType(type);
     journalSheetRef.current?.present();
   }, []);
-
-  // ── Plus handler ──────────────────────────────────────────────────────────────
-
-  const registerPlusHandler = useUIStore((s) => s.registerPlusHandler);
-  const unregisterPlusHandler = useUIStore((s) => s.unregisterPlusHandler);
-
-  useEffect(() => {
-    let handler: (() => void) | null = null;
-    if (selectedSection === 0) handler = handleCreateGuideItem;
-    else if (selectedSection === 1) handler = handleCreateStrategy;
-    // Loops, Pluto, Journal don't need a plus button action
-
-    if (handler) {
-      registerPlusHandler(handler);
-    } else {
-      unregisterPlusHandler();
-    }
-    return () => unregisterPlusHandler();
-  }, [
-    selectedSection,
-    handleCreateGuideItem,
-    handleCreateStrategy,
-    registerPlusHandler,
-    unregisterPlusHandler,
-  ]);
 
   const accentColor = SECTION_ACCENT[selectedSection] ?? colors.capture.primary;
 
