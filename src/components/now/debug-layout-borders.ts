@@ -1,7 +1,7 @@
 import type { TextStyle, ViewStyle } from 'react-native';
 
 /** Toggle temporary layout outlines on the Now header (greeting, week, date panel, chips) */
-export const DEBUG_NOW_HEADER_BORDERS = false;
+export const DEBUG_NOW_HEADER_BORDERS = true;
 
 const outline = (color: string) =>
   ({ borderWidth: 2, borderStyle: 'solid' as const, borderColor: color }) satisfies ViewStyle & TextStyle;
