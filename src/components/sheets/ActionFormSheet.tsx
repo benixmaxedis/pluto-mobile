@@ -96,7 +96,7 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
             {
               onSuccess: () => {
                 reset();
-                (ref as React.RefObject<FormSheetRef | null>).current?.dismiss();
+                (ref as React.RefObject<FormSheetRef | null> | null)?.current?.dismiss();
                 onDismiss?.();
               },
             },
@@ -105,7 +105,7 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
           createAction.mutate(data, {
             onSuccess: () => {
               reset();
-              (ref as React.RefObject<FormSheetRef | null>).current?.dismiss();
+              (ref as React.RefObject<FormSheetRef | null> | null)?.current?.dismiss();
               onDismiss?.();
             },
           });

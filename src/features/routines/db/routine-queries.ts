@@ -207,6 +207,35 @@ export async function getPendingInstancesByDate(date: string): Promise<RoutineIn
   });
 }
 
+export async function getCompletedInstancesByDate(date: string): Promise<RoutineInstanceWithTemplateTitle[]> {
+  const userId = await uid();
+  const { data, error } = await getSupabase()
+    .from('routine_instances')
+    .select(
+      `
+      *,
+      routine_templates (
+        title
+      )
+    `,
+    )
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .eq('instance_date', date)
+    .eq('status', 'completed');
+  if (error) throw error;
+  const rows = camelRows((data ?? []) as Record<string, unknown>[]);
+  return rows.map((row) => {
+    const nested = row.routineTemplates;
+    const templateTitle =
+      nested && typeof nested === 'object' && nested !== null && 'title' in nested
+        ? String((nested as { title: unknown }).title ?? '')
+        : '';
+    const { routineTemplates: _rt, ...rest } = row;
+    return { ...rest, templateTitle } as RoutineInstanceWithTemplateTitle;
+  });
+}
+
 export async function getTerminalRoutineInstancesByDate(
   date: string,
 ): Promise<RoutineInstanceWithTemplateTitle[]> {

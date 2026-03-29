@@ -10,6 +10,7 @@ export function useCreateAction() {
     mutationFn: (data: ActionFormData) => actionQueries.createAction(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
+      queryClient.invalidateQueries({ queryKey: ['queue'] });
     },
   });
 }

@@ -104,9 +104,9 @@ export default function TodayScreen() {
 
   useSyncCreateDrawerPreference(null);
 
-  const { skipped: skippedHistory, completed: completedHistory, isFetched: historyFetched } =
+  const { skipped: skippedHistory, isFetched: historyFetched } =
     useMergedNowHistory(selectedDate, sessionFilter);
-  const hasSessionHistory = skippedHistory.length > 0 || completedHistory.length > 0;
+  const hasSessionHistory = skippedHistory.length > 0;
 
   const sessionEnded = sessionEndedForFilter(selectedDate, sessionFilter);
   const showEmptyMain = displayQueue.length === 0 && historyFetched && !hasSessionHistory;
@@ -251,25 +251,6 @@ export default function TodayScreen() {
             onPress={handleItemPress}
             readOnly={sessionEnded}
           />
-        )}
-
-        {completedHistory.length > 0 && (
-          <View style={{ gap: spacing.md, paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Ionicons name="calendar-outline" size={17} color={colors.text.secondary} />
-              <Text style={textStyles.sectionLabel}>Completed</Text>
-            </View>
-            <View style={{ gap: spacing.sm }}>
-              {completedHistory.map((row) => (
-                <SessionHistoryRow
-                  key={`done-${row.id}`}
-                  title={row.title}
-                  entityLabel={row.type === 'action' ? 'Action' : 'Routine'}
-                  outcome="completed"
-                />
-              ))}
-            </View>
-          </View>
         )}
 
         {skippedHistory.length > 0 && (

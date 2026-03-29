@@ -2,15 +2,17 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { useAppStore } from '@/store/app-store';
 import { buildQueue, type QueueItem } from '../engine/queue-builder';
-import { getActionsForQueue } from '@/features/actions/db/action-queries';
-import { getPendingInstancesByDate } from '@/features/routines/db/routine-queries';
+import { getActionsForQueue, getCompletedActionsForDate } from '@/features/actions/db/action-queries';
+import { getPendingInstancesByDate, getCompletedInstancesByDate } from '@/features/routines/db/routine-queries';
 import type { Session } from '@/lib/constants';
 import { actionTabSession, routineTabSession } from '../session-attribution';
 
 async function fetchQueue(date: string, session: Session): Promise<QueueItem[]> {
-  const [rawActions, rawInstances] = await Promise.all([
+  const [rawActions, rawInstances, completedActions, completedInstances] = await Promise.all([
     getActionsForQueue(date),
     getPendingInstancesByDate(date),
+    getCompletedActionsForDate(date),
+    getCompletedInstancesByDate(date),
   ]);
 
   const actionItems: QueueItem[] = rawActions.map((a) => ({
@@ -34,14 +36,44 @@ async function fetchQueue(date: string, session: Session): Promise<QueueItem[]> 
     session: routineTabSession(ri),
     priority: 'normal' as const,
     status: ri.status ?? 'pending',
-    isOverdue: false, // Routine instances don't carry forward
+    isOverdue: false,
     carryForwardCount: 0,
     sortOrder: ri.sortOrder ?? 0,
     createdAt: ri.createdAt,
     templateId: ri.routineTemplateId,
   }));
 
-  return buildQueue(date, session, actionItems, instanceItems);
+  const pendingQueue = buildQueue(date, session, actionItems, instanceItems);
+
+  // Append completed items for this date — rendered at the bottom of each session card
+  const completedActionItems: QueueItem[] = completedActions.map((a) => ({
+    id: a.id,
+    type: 'action' as const,
+    title: a.title,
+    session: actionTabSession(a),
+    priority: (a.priority ?? 'normal') as 'normal' | 'high',
+    status: 'completed',
+    isOverdue: false,
+    carryForwardCount: a.carryForwardCount ?? 0,
+    sortOrder: a.sortOrder ?? 0,
+    createdAt: a.createdAt,
+    actionKind: (a.actionKind ?? 'normal') as 'normal' | 'chain_generated',
+  }));
+
+  const completedInstanceItems: QueueItem[] = completedInstances.map((ri) => ({
+    id: ri.id,
+    type: 'routine_instance' as const,
+    title: ri.templateTitle || 'Routine',
+    session: routineTabSession(ri),
+    priority: 'normal' as const,
+    status: 'completed',
+    isOverdue: false,
+    carryForwardCount: 0,
+    sortOrder: ri.sortOrder ?? 0,
+    createdAt: ri.createdAt,
+  }));
+
+  return [...pendingQueue, ...completedActionItems, ...completedInstanceItems];
 }
 
 export function useQueue() {

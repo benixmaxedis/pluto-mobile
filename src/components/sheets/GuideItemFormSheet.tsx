@@ -77,7 +77,7 @@ export const GuideItemFormSheet = forwardRef<FormSheetRef, GuideItemFormSheetPro
             {
               onSuccess: () => {
                 reset();
-                (ref as React.RefObject<FormSheetRef | null>).current?.dismiss();
+                (ref as React.RefObject<FormSheetRef | null> | null)?.current?.dismiss();
                 onDismiss?.();
               },
             },
@@ -86,7 +86,7 @@ export const GuideItemFormSheet = forwardRef<FormSheetRef, GuideItemFormSheetPro
           createGuideItem.mutate(data, {
             onSuccess: () => {
               reset();
-              (ref as React.RefObject<FormSheetRef | null>).current?.dismiss();
+              (ref as React.RefObject<FormSheetRef | null> | null)?.current?.dismiss();
               onDismiss?.();
             },
           });

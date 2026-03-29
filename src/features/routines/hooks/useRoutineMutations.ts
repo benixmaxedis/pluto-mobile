@@ -19,6 +19,7 @@ export function useCreateTemplate() {
         console.error('Failed to generate routine instances after create', e);
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.routineInstances.all });
+      queryClient.invalidateQueries({ queryKey: ['queue'] });
     },
   });
 }

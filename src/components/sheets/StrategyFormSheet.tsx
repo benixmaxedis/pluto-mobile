@@ -83,7 +83,7 @@ export const StrategyFormSheet = forwardRef<FormSheetRef, StrategyFormSheetProps
             {
               onSuccess: () => {
                 reset();
-                (ref as React.RefObject<FormSheetRef | null>).current?.dismiss();
+                (ref as React.RefObject<FormSheetRef | null> | null)?.current?.dismiss();
                 onDismiss?.();
               },
             },
@@ -92,7 +92,7 @@ export const StrategyFormSheet = forwardRef<FormSheetRef, StrategyFormSheetProps
           createStrategy.mutate(data, {
             onSuccess: () => {
               reset();
-              (ref as React.RefObject<FormSheetRef | null>).current?.dismiss();
+              (ref as React.RefObject<FormSheetRef | null> | null)?.current?.dismiss();
               onDismiss?.();
             },
           });
