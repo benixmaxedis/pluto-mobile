@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, type LayoutChangeEvent } from 'react-native';
+import { View, Text, Platform, type LayoutChangeEvent, type TextStyle } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { colors, fontFamily, letterSpacing, spacing } from '@/lib/theme';
 import {
@@ -16,10 +16,13 @@ type Props = {
   panelLayoutBorders?: boolean;
 };
 
-const DATE_DAY = 70;
-const DATE_DAY_LH = 72;
+const DATE_DAY = 64;
+/** Match font size — keeps the day row short without clipping the numeral. */
+const DATE_DAY_LH = 64;
 const DATE_MONTH = 48;
-const DATE_MONTH_LH = 50;
+/** Extra vertical room so Michroma “MMM” doesn’t clip / breach its outline. */
+const DATE_MONTH_LH = 58;
+/** Pull month up toward day; keep modest so overlap stays inside combined stack bounds. */
 const MONTH_PULL_UP = -10;
 
 const WEEKDAY_SIZE = 15;
@@ -36,6 +39,10 @@ const eventMetaLabel = {
   letterSpacing: letterSpacing.label,
   color: colors.text.secondary,
 } as const;
+
+/** Android only — trims extra padding under display numerals */
+const androidTightNumerals: TextStyle | undefined =
+  Platform.OS === 'android' ? { includeFontPadding: false } : undefined;
 
 export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders = false }: Props) {
   const [dayIntrinsicW, setDayIntrinsicW] = useState(0);
@@ -133,42 +140,57 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
             </Text>
           </PanelDebugOutline>
 
-          {/* Date block — self-measured to align day/month widths */}
-          <PanelDebugOutline color="#34d399" enabled={b} style={{ alignSelf: 'flex-start', width: dateBlockW }}>
-            <PanelDebugOutline color="#10b981" enabled={b}>
+          {/* Date block — shared width; day/month rows shrink-wrap so outlines match glyph bounds */}
+          <PanelDebugOutline
+            color="#34d399"
+            enabled={b}
+            style={{
+              alignSelf: 'flex-start',
+              width: dateBlockW,
+              alignItems: 'center',
+              overflow: 'visible',
+            }}
+          >
+            <PanelDebugOutline color="#10b981" enabled={b} style={{ alignSelf: 'center', overflow: 'visible' }}>
               <Text
                 onLayout={(e: LayoutChangeEvent) => {
                   const w = e.nativeEvent.layout.width;
                   if (w > 0) setDayIntrinsicW((prev) => (prev === w ? prev : w));
                 }}
-                style={{
-                  fontFamily: fontFamily.michroma,
-                  fontSize: DATE_DAY,
-                  lineHeight: DATE_DAY_LH,
-                  letterSpacing: letterSpacing.displayTight,
-                  color: blue,
-                  textAlign: 'center',
-                }}
+                style={[
+                  {
+                    fontFamily: fontFamily.michroma,
+                    fontSize: DATE_DAY,
+                    lineHeight: DATE_DAY_LH,
+                    letterSpacing: letterSpacing.displayTight,
+                    color: blue,
+                    textAlign: 'center',
+                  },
+                  androidTightNumerals,
+                ]}
                 numberOfLines={1}
               >
                 {dayNum}
               </Text>
             </PanelDebugOutline>
-            <PanelDebugOutline color="#059669" enabled={b}>
+            <PanelDebugOutline color="#059669" enabled={b} style={{ alignSelf: 'center', overflow: 'visible' }}>
               <Text
                 onLayout={(e: LayoutChangeEvent) => {
                   const w = e.nativeEvent.layout.width;
                   if (w > 0) setMonthIntrinsicW((prev) => (prev === w ? prev : w));
                 }}
-                style={{
-                  fontFamily: fontFamily.michroma,
-                  fontSize: DATE_MONTH,
-                  lineHeight: DATE_MONTH_LH,
-                  letterSpacing: letterSpacing.displayTight,
-                  color: blue,
-                  marginTop: MONTH_PULL_UP,
-                  textAlign: 'center',
-                }}
+                style={[
+                  {
+                    fontFamily: fontFamily.michroma,
+                    fontSize: DATE_MONTH,
+                    lineHeight: DATE_MONTH_LH,
+                    letterSpacing: letterSpacing.displayTight,
+                    color: blue,
+                    marginTop: MONTH_PULL_UP,
+                    textAlign: 'center',
+                  },
+                  androidTightNumerals,
+                ]}
                 numberOfLines={1}
               >
                 {month}
@@ -253,7 +275,8 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
             style={{
               flex: 1,
               minWidth: 0,
-              justifyContent: 'flex-start',
+              /** Center the events stack vertically in the column (avoid flex:1 bands — RN can give them 0 height and adjustsFontSizeToFit shrinks time to invisible). */
+              justifyContent: 'center',
             }}
           >
             <PanelDebugOutline color="#fde047" enabled={b}>
@@ -262,7 +285,7 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
             <View ref={fromTimeWrapRef} collapsable={false}>
               <PanelDebugOutline color="#2dd4bf" enabled={b}>
                 <Text
-                  style={timeTextStyle}
+                  style={[timeTextStyle, androidTightNumerals]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.7}
@@ -278,7 +301,7 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
             <View ref={toTimeWrapRef} collapsable={false}>
               <PanelDebugOutline color="#38bdf8" enabled={b}>
                 <Text
-                  style={timeTextStyle}
+                  style={[timeTextStyle, androidTightNumerals]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.7}
