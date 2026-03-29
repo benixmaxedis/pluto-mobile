@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Card, Badge } from '@/components/ui';
 import { colors, spacing, fontSize, borderRadius } from '@/lib/theme';
 import { formatDisplayDate } from '@/lib/utils/date';
@@ -34,6 +35,8 @@ export function ActionCard({
 }: ActionCardProps) {
   const displayDate = effectiveDate ?? scheduledDate;
   const displaySession = effectiveSession ?? scheduledSession;
+  const iconName = priority === 'high' ? 'flash-outline' : 'checkmark-circle-outline';
+  const iconColor = priority === 'high' ? colors.warning : colors.actions.primary;
 
   return (
     <Pressable
@@ -41,62 +44,65 @@ export function ActionCard({
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
     >
       <Card accentColor={colors.actions.primary}>
-        <View style={{ gap: spacing.sm }}>
-          {/* Title row */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            {/* Priority indicator */}
-            {priority === 'high' && (
-              <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: borderRadius.full,
-                  backgroundColor: colors.warning,
-                }}
-              />
-            )}
-
-            <Text
-              style={{
-                flex: 1,
-                fontSize: fontSize.base,
-                fontWeight: '600',
-                color: colors.text.primary,
-              }}
-              numberOfLines={2}
-            >
-              {title}
-            </Text>
-
-            {isOverdue && <Badge label="Overdue" color={colors.error} size="sm" />}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          {/* Type / priority icon */}
+          <View
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: borderRadius.md,
+              backgroundColor: iconColor + '1A',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Ionicons name={iconName as any} size={18} color={iconColor} />
           </View>
 
-          {/* Meta row: date, session, subtask count */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
-            {displayDate && (
-              <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary }}>
-                {formatDisplayDate(displayDate)}
+          {/* Content */}
+          <View style={{ flex: 1, minWidth: 0, gap: spacing.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text
+                style={{
+                  flex: 1,
+                  fontSize: fontSize.base,
+                  fontWeight: '600',
+                  color: colors.text.primary,
+                }}
+                numberOfLines={2}
+              >
+                {title}
               </Text>
-            )}
-            {displaySession && (
-              <Badge
-                label={getSessionLabel(displaySession)}
-                color={colors.actions.primary}
-                size="sm"
-              />
-            )}
-            {subtaskProgress && subtaskProgress.total > 0 && (
-              <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary }}>
-                {subtaskProgress.completed}/{subtaskProgress.total} subtasks
-              </Text>
-            )}
-            {status !== 'pending' && (
-              <Badge
-                label={status.charAt(0).toUpperCase() + status.slice(1)}
-                color={status === 'completed' ? colors.success : colors.text.secondary}
-                size="sm"
-              />
-            )}
+              {isOverdue && <Badge label="Overdue" color={colors.error} size="sm" />}
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+              {displayDate && (
+                <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary }}>
+                  {formatDisplayDate(displayDate)}
+                </Text>
+              )}
+              {displaySession && (
+                <Badge
+                  label={getSessionLabel(displaySession)}
+                  color={colors.actions.primary}
+                  size="sm"
+                />
+              )}
+              {subtaskProgress && subtaskProgress.total > 0 && (
+                <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary }}>
+                  {subtaskProgress.completed}/{subtaskProgress.total} subtasks
+                </Text>
+              )}
+              {status !== 'pending' && (
+                <Badge
+                  label={status.charAt(0).toUpperCase() + status.slice(1)}
+                  color={status === 'completed' ? colors.success : colors.text.secondary}
+                  size="sm"
+                />
+              )}
+            </View>
           </View>
         </View>
       </Card>

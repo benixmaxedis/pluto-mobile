@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, useWindowDimensions } from 'react-native';
+import { View, Text, Switch, ScrollView, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, textStyles } from '@/lib/theme';
+import { colors, spacing, textStyles, fontFamily } from '@/lib/theme';
 import { EmptyState } from '@/components/ui';
 import { NowGreeting } from '@/components/now/NowGreeting';
 import { NowWeekStrip } from '@/components/now/NowWeekStrip';
@@ -31,6 +31,7 @@ import {
 } from '@/features/now/use-now-queues';
 import { useMergedNowHistory } from '@/features/now/use-merged-session-history';
 import { useSyncCreateDrawerPreference } from '@/features/now/use-sync-create-drawer-preference';
+import { DEBUG_DATE_PANEL_BORDERS } from '@/components/now/debug-layout-borders';
 import type { QueueItem } from '@/features/queue/engine/queue-builder';
 
 const FLOATING_TAB_BAR_CLEARANCE = 12 + 64;
@@ -60,7 +61,9 @@ export default function TodayScreen() {
   useSessionEngine();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const headerMaxHeight = Math.round(windowHeight * 0.35);
+  const headerMaxHeight = Math.round(windowHeight * 0.45);
+
+  const [showBorders, setShowBorders] = useState(DEBUG_DATE_PANEL_BORDERS);
 
   const { selectedDate, setSelectedDate, currentSession, setCurrentSession } = useAppStore();
   const today = todayISO();
@@ -209,6 +212,7 @@ export default function TodayScreen() {
         <NowDateSessionPanel
           dateIso={selectedDate}
           sessionFilter={sessionFilter}
+          showBorders={showBorders}
         />
 
         <NowSessionChips value={sessionFilter} onChange={setSessionFilter} />
@@ -269,6 +273,43 @@ export default function TodayScreen() {
         onMove={handleMove}
         readOnly={sessionEnded}
       />
+
+      {/* Debug border toggle — fixed above tab bar, only shown when debug flag is on */}
+      {DEBUG_DATE_PANEL_BORDERS && (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 88,
+            right: spacing.lg,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: 20,
+            paddingVertical: 6,
+            paddingHorizontal: spacing.sm,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 11,
+              fontFamily: fontFamily.generalSansMedium,
+              color: colors.text.muted,
+            }}
+          >
+            borders
+          </Text>
+          <Switch
+            value={showBorders}
+            onValueChange={setShowBorders}
+            trackColor={{ false: colors.border, true: colors.emphasis.primary + '66' }}
+            thumbColor={showBorders ? colors.emphasis.primary : colors.text.muted}
+            style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
+          />
+        </View>
+      )}
 
       <JournalFormSheet
         ref={journalSheetRef}

@@ -7,10 +7,12 @@ import {
   getSessionWindowLabels,
 } from '@/features/now/session-time-format';
 import type { NowSessionFilter } from '@/features/now/use-now-queues';
+import { dbgPanelBorder, dbgPanelTextBorder } from '@/components/now/debug-layout-borders';
 
 type Props = {
   dateIso: string;
   sessionFilter: NowSessionFilter;
+  showBorders?: boolean;
 };
 
 const DATE_DAY_SIZE = 72;
@@ -59,7 +61,8 @@ const toStyle = {
   color: colors.text.secondary,
 } as const;
 
-export function NowDateSessionPanel({ dateIso, sessionFilter }: Props) {
+export function NowDateSessionPanel({ dateIso, sessionFilter, showBorders = false }: Props) {
+  const b = showBorders;
   const [dayW, setDayW] = useState(0);
   const [monthW, setMonthW] = useState(0);
   const sharedW = dayW > 0 && monthW > 0 ? Math.max(dayW, monthW) : undefined;
@@ -109,12 +112,12 @@ export function NowDateSessionPanel({ dateIso, sessionFilter }: Props) {
   const toLabel = sessionWindow.to.toUpperCase();
 
   return (
-    <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.xs }}>
+    <View style={[{ paddingHorizontal: spacing.lg, marginTop: spacing.xs }, dbgPanelBorder('#ec4899', b)]}>
       {/* Main two-column row */}
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+      <View style={[{ flexDirection: 'row', alignItems: 'flex-start' }, dbgPanelBorder('#8b5cf6', b)]}>
         {/* Left column */}
-        <View style={{ flexGrow: 0, flexShrink: 0, flexBasis: '48%' }}>
-          <Text style={headingStyle} numberOfLines={1}>
+        <View style={[{ flexGrow: 0, flexShrink: 0, flexBasis: '48%' }, dbgPanelBorder('#ef4444', b)]}>
+          <Text style={[headingStyle, dbgPanelTextBorder('#fbbf24', b)]} numberOfLines={1}>
             {weekday}
           </Text>
 
@@ -165,8 +168,8 @@ export function NowDateSessionPanel({ dateIso, sessionFilter }: Props) {
         </View>
 
         {/* Right column */}
-        <View style={{ flexGrow: 0, flexShrink: 0, flexBasis: '52%' }}>
-          <Text style={headingStyle} numberOfLines={1}>
+        <View style={[{ flexGrow: 0, flexShrink: 0, flexBasis: '52%' }, dbgPanelBorder('#f472b6', b)]}>
+          <Text style={[headingStyle, dbgPanelTextBorder('#fde047', b)]} numberOfLines={1}>
             Events from
           </Text>
 

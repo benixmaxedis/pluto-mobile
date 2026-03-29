@@ -1,6 +1,7 @@
 import { View, Text, Pressable } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Card, Badge } from '@/components/ui';
-import { colors, spacing, fontSize } from '@/lib/theme';
+import { colors, spacing, fontSize, borderRadius } from '@/lib/theme';
 import { getSessionLabel } from '@/lib/constants/sessions';
 import type { Session, RecurrenceType } from '@/lib/constants';
 
@@ -14,6 +15,19 @@ interface RoutineCardProps {
   isActive: boolean;
   onPress?: (id: string) => void;
 }
+
+const CATEGORY_ICONS: Record<string, string> = {
+  sleep:     'moon-outline',
+  health:    'heart-outline',
+  home:      'home-outline',
+  work:      'briefcase-outline',
+  finance:   'wallet-outline',
+  self_care: 'flower-outline',
+  social:    'people-outline',
+  learning:  'book-outline',
+  family:    'people-circle-outline',
+  other:     'ellipsis-horizontal-circle-outline',
+};
 
 function formatRecurrenceSummary(
   recurrenceType: RecurrenceType,
@@ -45,13 +59,6 @@ function formatRecurrenceSummary(
   return base;
 }
 
-function formatCategoryLabel(category: string): string {
-  return category
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
 export function RoutineCard({
   id,
   title,
@@ -63,6 +70,7 @@ export function RoutineCard({
   onPress,
 }: RoutineCardProps) {
   const opacity = isActive ? 1 : 0.5;
+  const iconName = (CATEGORY_ICONS[category] ?? 'ellipsis-horizontal-circle-outline') as any;
 
   return (
     <Pressable
@@ -70,40 +78,51 @@ export function RoutineCard({
       style={({ pressed }) => ({ opacity: pressed ? 0.7 * opacity : opacity })}
     >
       <Card accentColor={colors.routines.primary}>
-        <View style={{ gap: spacing.sm }}>
-          {/* Title row */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <Text
-              style={{
-                flex: 1,
-                fontSize: fontSize.base,
-                fontWeight: '600',
-                color: colors.text.primary,
-              }}
-              numberOfLines={2}
-            >
-              {title}
-            </Text>
-            {!isActive && <Badge label="Inactive" color={colors.text.secondary} size="sm" />}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          {/* Category icon */}
+          <View
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: borderRadius.md,
+              backgroundColor: colors.routines.primary + '1A',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Ionicons name={iconName} size={18} color={colors.routines.primary} />
           </View>
 
-          {/* Meta row */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
-            <Badge
-              label={formatCategoryLabel(category)}
-              color={colors.routines.primary}
-              size="sm"
-            />
-            {defaultSession && (
-              <Badge
-                label={getSessionLabel(defaultSession)}
-                color={colors.routines.secondary}
-                size="sm"
-              />
-            )}
-            <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary }}>
-              {formatRecurrenceSummary(recurrenceType, recurrenceDaysJson)}
-            </Text>
+          {/* Content */}
+          <View style={{ flex: 1, minWidth: 0, gap: spacing.xs }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text
+                style={{
+                  flex: 1,
+                  fontSize: fontSize.base,
+                  fontWeight: '600',
+                  color: colors.text.primary,
+                }}
+                numberOfLines={2}
+              >
+                {title}
+              </Text>
+              {!isActive && <Badge label="Inactive" color={colors.text.secondary} size="sm" />}
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
+              {defaultSession && (
+                <Badge
+                  label={getSessionLabel(defaultSession)}
+                  color={colors.routines.secondary}
+                  size="sm"
+                />
+              )}
+              <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary }}>
+                {formatRecurrenceSummary(recurrenceType, recurrenceDaysJson)}
+              </Text>
+            </View>
           </View>
         </View>
       </Card>
