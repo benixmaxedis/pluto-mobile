@@ -20,12 +20,12 @@ export function dbgTextBorder(color: string): TextStyle {
   return outline(color);
 }
 
-export function dbgPanelBorder(color: string): ViewStyle {
-  if (!DEBUG_DATE_PANEL_BORDERS) return {};
+export function dbgPanelBorder(color: string, enabled = DEBUG_DATE_PANEL_BORDERS): ViewStyle {
+  if (!enabled) return {};
   return outline(color);
 }
 
-export function dbgPanelTextBorder(color: string): TextStyle {
-  if (!DEBUG_DATE_PANEL_BORDERS) return {};
+export function dbgPanelTextBorder(color: string, enabled = DEBUG_DATE_PANEL_BORDERS): TextStyle {
+  if (!enabled) return {};
   return outline(color);
 }

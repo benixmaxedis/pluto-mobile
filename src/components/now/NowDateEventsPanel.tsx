@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, type LayoutChangeEvent } from 'react-native';
+import { View, Text, Switch, type LayoutChangeEvent } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { colors, fontFamily, letterSpacing, spacing } from '@/lib/theme';
 import {
@@ -7,19 +7,21 @@ import {
   getSessionWindowLabels,
 } from '@/features/now/session-time-format';
 import type { NowSessionFilter } from '@/features/now/use-now-queues';
-import { dbgPanelBorder, dbgPanelTextBorder } from '@/components/now/debug-layout-borders';
+import {
+  DEBUG_DATE_PANEL_BORDERS,
+  dbgPanelBorder,
+  dbgPanelTextBorder,
+} from '@/components/now/debug-layout-borders';
 
 type Props = {
   dateIso: string;
   sessionFilter: NowSessionFilter;
 };
 
-/** Larger display numerals — tight vertical rhythm between day & month */
 const DATE_DAY = 70;
 const DATE_DAY_LH = 72;
 const DATE_MONTH = 48;
 const DATE_MONTH_LH = 50;
-/** Pull month up toward day (gap was too loose) */
 const MONTH_PULL_UP = -10;
 
 const WEEKDAY_SIZE = 15;
@@ -29,6 +31,8 @@ const RAIL_W = 14;
 const NODE = 8;
 const LINE_W = 2;
 
+const DATE_PANEL_COLUMN_H = 150;
+
 const eventMetaLabel = {
   fontFamily: fontFamily.generalSansMedium,
   fontSize: 13,
@@ -37,19 +41,19 @@ const eventMetaLabel = {
   color: colors.text.secondary,
 } as const;
 
-/** Fixed block height so left (date) and right (rail + times) columns match */
-const DATE_PANEL_COLUMN_H = 150;
-
 export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
+  const [showBorders, setShowBorders] = useState(DEBUG_DATE_PANEL_BORDERS);
+
   const [dayIntrinsicW, setDayIntrinsicW] = useState(0);
   const [monthIntrinsicW, setMonthIntrinsicW] = useState(0);
   const dateBlockW =
-    dayIntrinsicW > 0 && monthIntrinsicW > 0 ? Math.max(dayIntrinsicW, monthIntrinsicW) : undefined;
+    dayIntrinsicW > 0 && monthIntrinsicW > 0
+      ? Math.max(dayIntrinsicW, monthIntrinsicW)
+      : undefined;
 
   const rightColumnRef = useRef<View>(null);
   const fromTimeWrapRef = useRef<View>(null);
   const toTimeWrapRef = useRef<View>(null);
-  /** Vertical centers of the two Michroma time rows inside the right column (px from top) */
   const [timeCentersY, setTimeCentersY] = useState<{ from: number; to: number } | null>(null);
 
   const measureTimeCenters = useCallback(() => {
@@ -61,27 +65,11 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
     let fromMid: number | null = null;
     let toMid: number | null = null;
     const commit = () => {
-      if (fromMid != null && toMid != null) {
-        setTimeCentersY({ from: fromMid, to: toMid });
-      }
+      if (fromMid != null && toMid != null) setTimeCentersY({ from: fromMid, to: toMid });
     };
 
-    fromW.measureLayout(
-      host,
-      (_x, y, _w, h) => {
-        fromMid = y + h / 2;
-        commit();
-      },
-      () => {},
-    );
-    toW.measureLayout(
-      host,
-      (_x, y, _w, h) => {
-        toMid = y + h / 2;
-        commit();
-      },
-      () => {},
-    );
+    fromW.measureLayout(host, (_x, y, _w, h) => { fromMid = y + h / 2; commit(); }, () => {});
+    toW.measureLayout(host, (_x, y, _w, h) => { toMid = y + h / 2; commit(); }, () => {});
   }, []);
 
   useEffect(() => {
@@ -90,23 +78,16 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
     setTimeCentersY(null);
   }, [dateIso]);
 
-  const d = parseISO(dateIso + 'T12:00:00');
-  const weekday = format(d, 'EEEE');
-  const dayNum = format(d, 'd');
-  const month = format(d, 'MMM');
-
   const sessionWindow =
     sessionFilter === 'all'
       ? getFullDayWindowLabels()
       : getSessionWindowLabels(sessionFilter);
 
   const sessionWindowKey = `${sessionFilter}:${sessionWindow.from}|${sessionWindow.to}`;
-
-  useEffect(() => {
-    setTimeCentersY(null);
-  }, [sessionWindowKey]);
+  useEffect(() => { setTimeCentersY(null); }, [sessionWindowKey]);
 
   const blue = colors.emphasis.primary;
+  const b = showBorders;
 
   const timeTextStyle = {
     fontFamily: fontFamily.michroma,
@@ -116,28 +97,58 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
     color: blue,
   } as const;
 
+  const d = parseISO(dateIso + 'T12:00:00');
+  const weekday = format(d, 'EEEE');
+  const dayNum = format(d, 'd');
+  const month = format(d, 'MMM');
+
   return (
     <View
       style={[
         { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, marginBottom: spacing.xs },
-        dbgPanelBorder('#ec4899'),
+        dbgPanelBorder('#ec4899', b),
       ]}
     >
+      {/* Debug toggle */}
+      {DEBUG_DATE_PANEL_BORDERS && (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: spacing.xs,
+            marginBottom: 4,
+          }}
+        >
+          <Text style={{ fontSize: 11, color: colors.text.muted }}>borders</Text>
+          <Switch
+            value={showBorders}
+            onValueChange={setShowBorders}
+            trackColor={{ false: colors.border, true: colors.emphasis.primary + '66' }}
+            thumbColor={showBorders ? colors.emphasis.primary : colors.text.muted}
+            style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
+          />
+        </View>
+      )}
+
+      {/* Two-column row */}
       <View
-        style={[{ flexDirection: 'row', alignItems: 'stretch', gap: spacing.xs }, dbgPanelBorder('#8b5cf6')]}
+        style={[
+          { flexDirection: 'row', alignItems: 'stretch', gap: spacing.xs },
+          dbgPanelBorder('#8b5cf6', b),
+        ]}
       >
-        {/* Left ~50% — fixed height matches right column */}
+        {/* Left: day + date stack — takes all remaining space */}
         <View
           style={[
             {
               flex: 1,
               minWidth: 0,
-              maxWidth: '50%',
               minHeight: DATE_PANEL_COLUMN_H,
               height: DATE_PANEL_COLUMN_H,
               justifyContent: 'center',
             },
-            dbgPanelBorder('#ef4444'),
+            dbgPanelBorder('#ef4444', b),
           ]}
         >
           <Text
@@ -150,20 +161,18 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
                 color: blue,
                 marginBottom: spacing.xs,
               },
-              dbgPanelTextBorder('#fbbf24'),
+              dbgPanelTextBorder('#fbbf24', b),
             ]}
             numberOfLines={1}
           >
             {weekday}
           </Text>
+
+          {/* Date block — self-measured to align day/month widths */}
           <View
             style={[
-              {
-                width: dateBlockW,
-                maxWidth: '100%',
-                alignSelf: 'flex-start',
-              },
-              dbgPanelBorder('#34d399'),
+              { alignSelf: 'flex-start', width: dateBlockW },
+              dbgPanelBorder('#34d399', b),
             ]}
           >
             <Text
@@ -178,10 +187,9 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
                   lineHeight: DATE_DAY_LH,
                   letterSpacing: letterSpacing.displayTight,
                   color: blue,
-                  width: dateBlockW ? '100%' : undefined,
                   textAlign: 'center',
                 },
-                dbgPanelTextBorder('#10b981'),
+                dbgPanelTextBorder('#10b981', b),
               ]}
               numberOfLines={1}
             >
@@ -200,10 +208,9 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
                   letterSpacing: letterSpacing.displayTight,
                   color: blue,
                   marginTop: MONTH_PULL_UP,
-                  width: dateBlockW ? '100%' : undefined,
                   textAlign: 'center',
                 },
-                dbgPanelTextBorder('#059669'),
+                dbgPanelTextBorder('#059669', b),
               ]}
               numberOfLines={1}
             >
@@ -212,13 +219,13 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
           </View>
         </View>
 
-        {/* Right ~50%: rail between time row centers + times */}
+        {/* Right: rail + times — fixed basis so it never competes with left */}
         <View
           ref={rightColumnRef}
           style={{
-            flex: 1,
-            minWidth: 0,
-            maxWidth: '50%',
+            flexShrink: 0,
+            flexGrow: 0,
+            flexBasis: '46%',
             minHeight: DATE_PANEL_COLUMN_H,
             height: DATE_PANEL_COLUMN_H,
             flexDirection: 'row',
@@ -226,6 +233,7 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
           }}
           onLayout={() => requestAnimationFrame(measureTimeCenters)}
         >
+          {/* Vertical rail */}
           <View
             style={{
               width: RAIL_W,
@@ -283,6 +291,7 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
               })()}
           </View>
 
+          {/* Times column */}
           <View
             style={[
               {
@@ -291,20 +300,20 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
                 height: DATE_PANEL_COLUMN_H,
                 justifyContent: 'center',
               },
-              dbgPanelBorder('#f472b6'),
+              dbgPanelBorder('#f472b6', b),
             ]}
           >
             <Text
-              style={[eventMetaLabel, { marginBottom: spacing.xs }, dbgPanelTextBorder('#fde047')]}
+              style={[eventMetaLabel, { marginBottom: spacing.xs }, dbgPanelTextBorder('#fde047', b)]}
             >
               Events from
             </Text>
-            <View ref={fromTimeWrapRef} collapsable={false} style={dbgPanelBorder('#2dd4bf')}>
+            <View ref={fromTimeWrapRef} collapsable={false} style={dbgPanelBorder('#2dd4bf', b)}>
               <Text
-                style={[timeTextStyle, dbgPanelTextBorder('#5eead4')]}
+                style={[timeTextStyle, dbgPanelTextBorder('#5eead4', b)]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.82}
+                minimumFontScale={0.7}
                 onLayout={() => requestAnimationFrame(measureTimeCenters)}
               >
                 {sessionWindow.from}
@@ -318,17 +327,17 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
                   justifyContent: 'center',
                   alignItems: 'flex-start',
                 },
-                dbgPanelBorder('#c084fc'),
+                dbgPanelBorder('#c084fc', b),
               ]}
             >
-              <Text style={[eventMetaLabel, dbgPanelTextBorder('#fb923c')]}>to</Text>
+              <Text style={[eventMetaLabel, dbgPanelTextBorder('#fb923c', b)]}>to</Text>
             </View>
-            <View ref={toTimeWrapRef} collapsable={false} style={dbgPanelBorder('#38bdf8')}>
+            <View ref={toTimeWrapRef} collapsable={false} style={dbgPanelBorder('#38bdf8', b)}>
               <Text
-                style={[timeTextStyle, dbgPanelTextBorder('#7dd3fc')]}
+                style={[timeTextStyle, dbgPanelTextBorder('#7dd3fc', b)]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                minimumFontScale={0.82}
+                minimumFontScale={0.7}
                 onLayout={() => requestAnimationFrame(measureTimeCenters)}
               >
                 {sessionWindow.to}
