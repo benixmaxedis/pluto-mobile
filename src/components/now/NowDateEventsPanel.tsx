@@ -60,7 +60,7 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
       : undefined;
 
   const dateTimesRowRef = useRef<View>(null);
-  const dayMeasureRef = useRef<View>(null);
+  const dayTextRef = useRef<Text | null>(null);
   const monthMeasureRef = useRef<View>(null);
   const rightColumnRef = useRef<View>(null);
   const fromTimeTextRef = useRef<Text | null>(null);
@@ -85,47 +85,25 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
     toT.measureLayout(host, (_x, y, _w, h) => { toMid = y + h / 2; commit(); }, () => {});
   }, []);
 
-  const syncTimeAlign = useCallback(() => {
+  /** Top of from-time Text ↔ top of day Text (independent of to-time so first layout can run). */
+  const syncFromTimeToDayTop = useCallback(() => {
     const row = dateTimesRowRef.current;
-    const dayEl = dayMeasureRef.current;
-    const monthEl = monthMeasureRef.current;
+    const dayEl = dayTextRef.current;
     const fromEl = fromTimeTextRef.current;
-    const toEl = toTimeTextRef.current;
-    if (!row || !dayEl || !monthEl || !fromEl || !toEl) return;
+    if (!row || !dayEl || !fromEl) return;
 
     dayEl.measureLayout(
       row,
       (_x, yDay) => {
-        monthEl.measureLayout(
+        fromEl.measureLayout(
           row,
-          (_x, yM, _wM, hM) => {
-            const monthBottom = yM + hM;
-            fromEl.measureLayout(
-              row,
-              (_x, yFrom) => {
-                toEl.measureLayout(
-                  row,
-                  (_x, yTo, _wT, hT) => {
-                    const toBottom = yTo + hT;
-                    const fromDelta = Math.abs(yDay - yFrom) < 0.5 ? 0 : yDay - yFrom;
-                    const toDelta = Math.abs(monthBottom - toBottom) < 0.5 ? 0 : monthBottom - toBottom;
-                    setTimeAlign((prev) => {
-                      const fromMarginTop = Math.round(prev.fromMarginTop + fromDelta);
-                      const toSectionMarginTop = Math.round(prev.toSectionMarginTop + toDelta);
-                      if (
-                        fromMarginTop === prev.fromMarginTop &&
-                        toSectionMarginTop === prev.toSectionMarginTop
-                      ) {
-                        return prev;
-                      }
-                      return { fromMarginTop, toSectionMarginTop };
-                    });
-                  },
-                  () => {},
-                );
-              },
-              () => {},
-            );
+          (_x, yFrom) => {
+            const fromDelta = Math.abs(yDay - yFrom) < 0.5 ? 0 : yDay - yFrom;
+            setTimeAlign((prev) => {
+              const fromMarginTop = Math.round(prev.fromMarginTop + fromDelta);
+              if (fromMarginTop === prev.fromMarginTop) return prev;
+              return { ...prev, fromMarginTop };
+            });
           },
           () => {},
         );
@@ -133,6 +111,40 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
       () => {},
     );
   }, []);
+
+  /** Bottom of to-time ↔ bottom of month (separate pass). */
+  const syncToTimeToMonthBottom = useCallback(() => {
+    const row = dateTimesRowRef.current;
+    const monthEl = monthMeasureRef.current;
+    const toEl = toTimeTextRef.current;
+    if (!row || !monthEl || !toEl) return;
+
+    monthEl.measureLayout(
+      row,
+      (_x, yM, _wM, hM) => {
+        const monthBottom = yM + hM;
+        toEl.measureLayout(
+          row,
+          (_x, yTo, _wT, hT) => {
+            const toBottom = yTo + hT;
+            const toDelta = Math.abs(monthBottom - toBottom) < 0.5 ? 0 : monthBottom - toBottom;
+            setTimeAlign((prev) => {
+              const toSectionMarginTop = Math.round(prev.toSectionMarginTop + toDelta);
+              if (toSectionMarginTop === prev.toSectionMarginTop) return prev;
+              return { ...prev, toSectionMarginTop };
+            });
+          },
+          () => {},
+        );
+      },
+      () => {},
+    );
+  }, []);
+
+  const syncTimeAlign = useCallback(() => {
+    syncFromTimeToDayTop();
+    syncToTimeToMonthBottom();
+  }, [syncFromTimeToDayTop, syncToTimeToMonthBottom]);
 
   const onDateTimesRowLayout = useCallback(() => {
     requestAnimationFrame(() => {
@@ -230,14 +242,13 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
             </View>
           </View>
 
-          {/* Body: date block (left) + rail / session times (right) */}
+          {/* Body: date block (left) + rail / session times (right).
+              No flex:1 here — parent column has no fixed height; flex:1 would collapse this row to 0. */}
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'stretch',
               gap: spacing.xs,
-              flex: 1,
-              minHeight: 0,
             }}
           >
         <PanelDebugOutline
@@ -261,9 +272,10 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
                 overflow: 'visible',
               }}
             >
-              <View ref={dayMeasureRef} collapsable={false} style={{ alignSelf: 'center' }}>
+              <View collapsable={false} style={{ alignSelf: 'center' }}>
                 <PanelDebugOutline color="#10b981" enabled={b} style={{ alignSelf: 'center', overflow: 'visible' }}>
                   <Text
+                    ref={dayTextRef}
                     onLayout={(e: LayoutChangeEvent) => {
                       const w = e.nativeEvent.layout.width;
                       if (w > 0) setDayIntrinsicW((prev) => (prev === w ? prev : w));
@@ -390,6 +402,8 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
               minWidth: 0,
               minHeight: 0,
               justifyContent: 'flex-start',
+              /** Matches date block `marginTop` so from-time and day start on the same baseline pass. */
+              paddingTop: spacing.sm,
             }}
           >
             <View collapsable={false} style={{ marginTop: timeAlign.fromMarginTop }}>
