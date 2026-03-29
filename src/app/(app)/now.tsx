@@ -8,6 +8,7 @@ import { NowGreeting } from '@/components/now/NowGreeting';
 import { NowWeekStrip } from '@/components/now/NowWeekStrip';
 import { NowDateEventsPanel } from '@/components/now/NowDateEventsPanel';
 import { NowSessionChips } from '@/components/now/NowSessionChips';
+import { dbgBorder } from '@/components/now/debug-layout-borders';
 import { NowTimeline } from '@/components/now/NowTimeline';
 import { SessionHistoryRow } from '@/components/cards/SessionHistoryRow';
 import { JournalFormSheet } from '@/components/sheets';
@@ -234,7 +235,12 @@ export default function NowScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: spacing['3xl'] }}
       >
-        <View style={{ maxHeight: headerMaxHeight, overflow: 'hidden' }}>
+        <View
+          style={[
+            { maxHeight: headerMaxHeight, overflow: 'hidden' },
+            dbgBorder('#a855f7'),
+          ]}
+        >
           <NowGreeting />
           <NowWeekStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
           <NowDateEventsPanel dateIso={selectedDate} sessionFilter={sessionFilter} />

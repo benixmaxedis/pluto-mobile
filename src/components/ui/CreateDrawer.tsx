@@ -285,7 +285,7 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
                   <Text
                     style={{
                       fontSize: fontSize.base,
-                      fontFamily: fontFamily.jakartaSemibold,
+                      fontFamily: fontFamily.generalSansSemibold,
                       color: colors.text.primary,
                       letterSpacing: 0.1,
                     }}
@@ -295,7 +295,7 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
                   <Text
                     style={{
                       fontSize: fontSize.sm,
-                      fontFamily: fontFamily.jakartaRegular,
+                      fontFamily: fontFamily.generalSansRegular,
                       color: colors.text.secondary,
                       marginTop: 2,
                     }}
@@ -362,7 +362,7 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
           <Text
             style={{
               fontSize: fontSize.md,
-              fontFamily: fontFamily.jakartaSemibold,
+              fontFamily: fontFamily.generalSansSemibold,
               color: colors.text.primary,
             }}
           >
@@ -386,7 +386,7 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
               paddingHorizontal: spacing.sm,
               paddingVertical: spacing.sm,
               fontSize: fontSize.base,
-              fontFamily: fontFamily.jakartaRegular,
+              fontFamily: fontFamily.generalSansRegular,
               color: colors.text.primary,
             }}
           />
@@ -405,7 +405,7 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
             <Text
               style={{
                 fontSize: fontSize.base,
-                fontFamily: fontFamily.jakartaSemibold,
+                fontFamily: fontFamily.generalSansSemibold,
                 color: colors.background,
               }}
             >
