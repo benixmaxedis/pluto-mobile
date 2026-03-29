@@ -11,7 +11,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { colors, spacing, fontSize, borderRadius, shadows, fontFamily } from '@/lib/theme';
-import { type FormSheetRef } from '@/components/sheets/FormSheet';
 import {
   ActionFormSheet,
   RoutineFormSheet,
@@ -136,18 +135,20 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
   const drawerTranslateY = useRef(new Animated.Value(400)).current;
   const [modalMounted, setModalMounted] = useState(false);
 
-  // Form sheet refs
-  const actionFormRef = useRef<FormSheetRef>(null);
-  const guideFormRef = useRef<FormSheetRef>(null);
-  const strategyFormRef = useRef<FormSheetRef>(null);
+  // Pending form sheet to open after drawer fully closes
+  const [pendingOpen, setPendingOpen] = useState<OptionId | null>(null);
+
+  // Form sheet visibility — each controlled declaratively
+  const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [routineSheetOpen, setRoutineSheetOpen] = useState(false);
+  const [loopSheetOpen, setLoopSheetOpen] = useState(false);
+  const [guideSheetOpen, setGuideSheetOpen] = useState(false);
+  const [strategySheetOpen, setStrategySheetOpen] = useState(false);
 
   // Quick loop capture
-  const [loopSheetOpen, setLoopSheetOpen] = useState(false);
   const [loopText, setLoopText] = useState('');
   const createOpenLoop = useCreateOpenLoop();
 
-  // Mount modal before animating in so children are ready
   useEffect(() => {
     if (visible) {
       setModalMounted(true);
@@ -176,20 +177,23 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
           duration: 200,
           useNativeDriver: true,
         }),
-      ]).start(() => setModalMounted(false));
+      ]).start(() => {
+        setModalMounted(false);
+        // Open the selected form sheet only after the drawer is fully dismissed
+        if (pendingOpen === 'action') setActionSheetOpen(true);
+        else if (pendingOpen === 'routine') setRoutineSheetOpen(true);
+        else if (pendingOpen === 'loop') setLoopSheetOpen(true);
+        else if (pendingOpen === 'code') setGuideSheetOpen(true);
+        else if (pendingOpen === 'strategy') setStrategySheetOpen(true);
+        setPendingOpen(null);
+      });
     }
-  }, [visible, backdropOpacity, drawerTranslateY]);
+  }, [visible, backdropOpacity, drawerTranslateY, pendingOpen]);
 
   const handleSelect = useCallback(
     (id: OptionId) => {
+      setPendingOpen(id);
       onClose();
-      setTimeout(() => {
-        if (id === 'action') actionFormRef.current?.present();
-        else if (id === 'routine') setRoutineSheetOpen(true);
-        else if (id === 'loop') setLoopSheetOpen(true);
-        else if (id === 'code') guideFormRef.current?.present();
-        else if (id === 'strategy') strategyFormRef.current?.present();
-      }, 120);
     },
     [onClose],
   );
@@ -213,7 +217,6 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
           onRequestClose={onClose}
           statusBarTranslucent
         >
-          {/* Single root view — required on Android for transparent modals */}
           <View style={styles.modalRoot}>
             <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: backdropOpacity }]}>
               <Pressable
@@ -259,76 +262,73 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
                 const IconComponent = opt.Icon;
                 const matchesTimeline = preferredOption === opt.id;
                 return (
-              <Pressable
-                key={opt.id}
-                onPress={() => handleSelect(opt.id)}
-                style={({ pressed }: { pressed: boolean }) => ({
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: spacing.sm,
-                  paddingHorizontal: spacing.lg,
-                  paddingVertical: spacing.sm,
-                  backgroundColor: pressed
-                    ? colors.surfaceRaised
-                    : matchesTimeline
-                      ? colors.surfaceRaised + '99'
-                      : 'transparent',
-                  borderTopWidth: index === 0 ? 0 : 1,
-                  borderTopColor: colors.borderSubtle,
-                  borderLeftWidth: matchesTimeline ? 3 : 0,
-                  borderLeftColor: matchesTimeline ? opt.color : 'transparent',
-                })}
-              >
-                {/* Icon pill */}
-                <View
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: borderRadius.md,
-                    backgroundColor: opt.color + '1A',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <IconComponent color={opt.color} />
-                </View>
-
-                {/* Labels */}
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      fontSize: fontSize.base,
-                      fontFamily: fontFamily.generalSansSemibold,
-                      color: colors.text.primary,
-                      letterSpacing: 0.1,
-                    }}
+                  <Pressable
+                    key={opt.id}
+                    onPress={() => handleSelect(opt.id)}
+                    style={({ pressed }: { pressed: boolean }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: spacing.sm,
+                      paddingHorizontal: spacing.lg,
+                      paddingVertical: spacing.sm,
+                      backgroundColor: pressed
+                        ? colors.surfaceRaised
+                        : matchesTimeline
+                          ? colors.surfaceRaised + '99'
+                          : 'transparent',
+                      borderTopWidth: index === 0 ? 0 : 1,
+                      borderTopColor: colors.borderSubtle,
+                      borderLeftWidth: matchesTimeline ? 3 : 0,
+                      borderLeftColor: matchesTimeline ? opt.color : 'transparent',
+                    })}
                   >
-                    {opt.label}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: fontSize.sm,
-                      fontFamily: fontFamily.generalSansRegular,
-                      color: colors.text.secondary,
-                      marginTop: 2,
-                    }}
-                  >
-                    {opt.description}
-                  </Text>
-                </View>
+                    <View
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: borderRadius.md,
+                        backgroundColor: opt.color + '1A',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <IconComponent color={opt.color} />
+                    </View>
 
-                {/* Chevron */}
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M9 18l6-6-6-6"
-                    stroke={colors.text.muted}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </Svg>
-              </Pressable>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: fontSize.base,
+                          fontFamily: fontFamily.generalSansSemibold,
+                          color: colors.text.primary,
+                          letterSpacing: 0.1,
+                        }}
+                      >
+                        {opt.label}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: fontSize.sm,
+                          fontFamily: fontFamily.generalSansRegular,
+                          color: colors.text.secondary,
+                          marginTop: 2,
+                        }}
+                      >
+                        {opt.description}
+                      </Text>
+                    </View>
+
+                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M9 18l6-6-6-6"
+                        stroke={colors.text.muted}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  </Pressable>
                 );
               })}
             </Animated.View>
@@ -364,78 +364,78 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
               gap: spacing.sm,
             }}
           >
-          {/* Handle */}
-          <View style={{ alignItems: 'center', marginBottom: spacing.xs }}>
-            <View
-              style={{
-                width: 36,
-                height: 4,
-                backgroundColor: colors.border,
-                borderRadius: borderRadius.full,
-              }}
-            />
-          </View>
+            <View style={{ alignItems: 'center', marginBottom: spacing.xs }}>
+              <View
+                style={{
+                  width: 36,
+                  height: 4,
+                  backgroundColor: colors.border,
+                  borderRadius: borderRadius.full,
+                }}
+              />
+            </View>
 
-          <Text
-            style={{
-              fontSize: fontSize.md,
-              fontFamily: fontFamily.generalSansSemibold,
-              color: colors.text.primary,
-            }}
-          >
-            Capture a thought
-          </Text>
-
-          <RNTextInput
-            placeholder="What's on your mind?"
-            placeholderTextColor={colors.text.muted}
-            value={loopText}
-            onChangeText={setLoopText}
-            onSubmitEditing={handleSubmitLoop}
-            returnKeyType="done"
-            autoFocus
-            multiline={false}
-            style={{
-              backgroundColor: colors.surfaceRaised,
-              borderWidth: 1,
-              borderColor: colors.border,
-              borderRadius: borderRadius.md,
-              paddingHorizontal: spacing.sm,
-              paddingVertical: spacing.sm,
-              fontSize: fontSize.base,
-              fontFamily: fontFamily.generalSansRegular,
-              color: colors.text.primary,
-            }}
-          />
-
-          <Pressable
-            onPress={handleSubmitLoop}
-            style={({ pressed }: { pressed: boolean }) => ({
-              backgroundColor: colors.capture.primary,
-              borderRadius: borderRadius.md,
-              paddingVertical: spacing.sm,
-              alignItems: 'center',
-              opacity: pressed || !loopText.trim() ? 0.6 : 1,
-            })}
-            disabled={!loopText.trim()}
-          >
             <Text
               style={{
-                fontSize: fontSize.base,
+                fontSize: fontSize.md,
                 fontFamily: fontFamily.generalSansSemibold,
-                color: colors.background,
+                color: colors.text.primary,
               }}
             >
-              Capture
+              Capture a thought
             </Text>
-          </Pressable>
+
+            <RNTextInput
+              placeholder="What's on your mind?"
+              placeholderTextColor={colors.text.muted}
+              value={loopText}
+              onChangeText={setLoopText}
+              onSubmitEditing={handleSubmitLoop}
+              returnKeyType="done"
+              autoFocus
+              multiline={false}
+              style={{
+                backgroundColor: colors.surfaceRaised,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: borderRadius.md,
+                paddingHorizontal: spacing.sm,
+                paddingVertical: spacing.sm,
+                fontSize: fontSize.base,
+                fontFamily: fontFamily.generalSansRegular,
+                color: colors.text.primary,
+              }}
+            />
+
+            <Pressable
+              onPress={handleSubmitLoop}
+              style={({ pressed }: { pressed: boolean }) => ({
+                backgroundColor: colors.capture.primary,
+                borderRadius: borderRadius.md,
+                paddingVertical: spacing.sm,
+                alignItems: 'center',
+                opacity: pressed || !loopText.trim() ? 0.6 : 1,
+              })}
+              disabled={!loopText.trim()}
+            >
+              <Text
+                style={{
+                  fontSize: fontSize.base,
+                  fontFamily: fontFamily.generalSansSemibold,
+                  color: colors.background,
+                }}
+              >
+                Capture
+              </Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
 
-      {/* ── Form sheets ── */}
+      {/* ── Form sheets — rendered outside drawer modal to avoid nesting issues ── */}
       <ActionFormSheet
-        ref={actionFormRef}
+        visible={actionSheetOpen}
+        onDismiss={() => setActionSheetOpen(false)}
         editId={undefined}
         editData={null}
       />
@@ -448,13 +448,15 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
       />
 
       <GuideItemFormSheet
-        ref={guideFormRef}
+        visible={guideSheetOpen}
+        onDismiss={() => setGuideSheetOpen(false)}
         editId={undefined}
         editData={null}
       />
 
       <StrategyFormSheet
-        ref={strategyFormRef}
+        visible={strategySheetOpen}
+        onDismiss={() => setStrategySheetOpen(false)}
         editId={undefined}
         editData={null}
       />

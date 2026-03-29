@@ -19,11 +19,12 @@ interface GuideItemFormSheetProps {
   editId?: string | null;
   editData?: Partial<GuideItemFormData> | null;
   defaultCategory?: string;
+  visible?: boolean;
   onDismiss?: () => void;
 }
 
 export const GuideItemFormSheet = forwardRef<FormSheetRef, GuideItemFormSheetProps>(
-  ({ editId, editData, defaultCategory, onDismiss }, ref) => {
+  ({ editId, editData, defaultCategory, visible, onDismiss }, ref) => {
     const createGuideItem = useCreateGuideItem();
     const updateGuideItem = useUpdateGuideItem();
     const isEdit = !!editId;
@@ -95,7 +96,7 @@ export const GuideItemFormSheet = forwardRef<FormSheetRef, GuideItemFormSheetPro
     );
 
     return (
-      <FormSheet ref={ref} title={isEdit ? 'Edit Code Item' : 'New Code Item'} accentColor={colors.guide.primary}>
+      <FormSheet ref={ref} title={isEdit ? 'Edit Code Item' : 'New Code Item'} accentColor={colors.guide.primary} visible={visible} onDismiss={onDismiss}>
         {/* Title */}
         <Controller
           control={control}

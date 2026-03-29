@@ -32,11 +32,12 @@ const DATE_OPTIONS = [
 interface ActionFormSheetProps {
   editId?: string | null;
   editData?: Partial<ActionFormData> | null;
+  visible?: boolean;
   onDismiss?: () => void;
 }
 
 export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
-  ({ editId, editData, onDismiss }, ref) => {
+  ({ editId, editData, visible, onDismiss }, ref) => {
     const createAction = useCreateAction();
     const updateAction = useUpdateAction();
     const isEdit = !!editId;
@@ -114,7 +115,7 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
     );
 
     return (
-      <FormSheet ref={ref} title={isEdit ? 'Edit Action' : 'New Action'} accentColor={colors.actions.primary}>
+      <FormSheet ref={ref} title={isEdit ? 'Edit Action' : 'New Action'} accentColor={colors.actions.primary} visible={visible} onDismiss={onDismiss}>
         {/* Title */}
         <Controller
           control={control}

@@ -22,11 +22,12 @@ interface StrategyFormSheetProps {
   editId?: string | null;
   editData?: Partial<StrategyFormData> | null;
   defaultCategory?: string;
+  visible?: boolean;
   onDismiss?: () => void;
 }
 
 export const StrategyFormSheet = forwardRef<FormSheetRef, StrategyFormSheetProps>(
-  ({ editId, editData, defaultCategory, onDismiss }, ref) => {
+  ({ editId, editData, defaultCategory, visible, onDismiss }, ref) => {
     const createStrategy = useCreateStrategy();
     const updateStrategy = useUpdateStrategy();
     const isEdit = !!editId;
@@ -105,6 +106,8 @@ export const StrategyFormSheet = forwardRef<FormSheetRef, StrategyFormSheetProps
         ref={ref}
         title={isEdit ? 'Edit Strategy' : 'New Strategy'}
         accentColor={colors.strategies.primary}
+        visible={visible}
+        onDismiss={onDismiss}
       >
         {/* Title */}
         <Controller
