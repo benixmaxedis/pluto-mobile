@@ -8,7 +8,6 @@ import { NowGreeting } from '@/components/now/NowGreeting';
 import { NowWeekStrip } from '@/components/now/NowWeekStrip';
 import { NowDateEventsPanel } from '@/components/now/NowDateEventsPanel';
 import { NowSessionChips } from '@/components/now/NowSessionChips';
-import { dbgBorder } from '@/components/now/debug-layout-borders';
 import { NowTimeline } from '@/components/now/NowTimeline';
 import { SessionHistoryRow } from '@/components/cards/SessionHistoryRow';
 import { JournalFormSheet } from '@/components/sheets';
@@ -52,7 +51,7 @@ function sessionEndedForFilter(date: string, filter: NowSessionFilter): boolean 
   return isNowSessionPast(date, filter);
 }
 
-export default function NowScreen() {
+export default function TodayScreen() {
   useSessionEngine();
   const { height: windowHeight } = useWindowDimensions();
   /** Greeting + week + date/events + session row — target ≤35% of viewport */
@@ -235,12 +234,7 @@ export default function NowScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: spacing['3xl'] }}
       >
-        <View
-          style={[
-            { maxHeight: headerMaxHeight, overflow: 'hidden' },
-            dbgBorder('#a855f7'),
-          ]}
-        >
+        <View style={{ maxHeight: headerMaxHeight, overflow: 'hidden' }}>
           <NowGreeting />
           <NowWeekStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
           <NowDateEventsPanel dateIso={selectedDate} sessionFilter={sessionFilter} />

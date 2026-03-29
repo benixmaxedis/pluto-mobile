@@ -1,17 +1,15 @@
 import type { TextStyle } from 'react-native';
 
 /**
- * Plus Jakarta Sans — wide geometric sans (not condensed).
- * - Headings: 600, slight positive tracking (0.2–0.4).
- * - Large numerals: 500, negative tracking (~−1 to −1.5).
- * - Labels / buttons: 500, tracking 0.3–0.6.
+ * General Sans — UI sans (400 / 500 / 600).
+ * Michroma — reserved for Now panel stacked date + session times only (see NowDateEventsPanel).
  */
 
 export const fontFamily = {
   michroma: 'Michroma_400Regular',
-  jakartaRegular: 'PlusJakartaSans_400Regular',
-  jakartaMedium: 'PlusJakartaSans_500Medium',
-  jakartaSemibold: 'PlusJakartaSans_600SemiBold',
+  generalSansRegular: 'GeneralSans_400Regular',
+  generalSansMedium: 'GeneralSans_500Medium',
+  generalSansSemibold: 'GeneralSans_600Semibold',
 } as const;
 
 export const fontSize = {
@@ -53,62 +51,62 @@ export const letterSpacing = {
 
 export const typographyStyles = {
   displayXL: {
-    fontFamily: fontFamily.jakartaMedium,
+    fontFamily: fontFamily.generalSansMedium,
     fontSize: 44,
     lineHeight: 50,
     letterSpacing: letterSpacing.displayTight,
   },
   displayLarge: {
-    fontFamily: fontFamily.jakartaMedium,
+    fontFamily: fontFamily.generalSansMedium,
     fontSize: 34,
     lineHeight: 40,
     letterSpacing: letterSpacing.displayTight,
   },
   heading1: {
-    fontFamily: fontFamily.jakartaSemibold,
+    fontFamily: fontFamily.generalSansSemibold,
     fontSize: 22,
     lineHeight: 28,
     letterSpacing: letterSpacing.heading,
   },
   heading2: {
-    fontFamily: fontFamily.jakartaSemibold,
+    fontFamily: fontFamily.generalSansSemibold,
     fontSize: 18,
     lineHeight: 24,
     letterSpacing: letterSpacing.heading,
   },
   title: {
-    fontFamily: fontFamily.jakartaSemibold,
+    fontFamily: fontFamily.generalSansSemibold,
     fontSize: 17,
     lineHeight: 22,
     letterSpacing: letterSpacing.heading,
   },
   body: {
-    fontFamily: fontFamily.jakartaRegular,
+    fontFamily: fontFamily.generalSansRegular,
     fontSize: 16,
     lineHeight: 24,
     letterSpacing: letterSpacing.body,
   },
   bodySmall: {
-    fontFamily: fontFamily.jakartaRegular,
+    fontFamily: fontFamily.generalSansRegular,
     fontSize: 14,
     lineHeight: 20,
     letterSpacing: letterSpacing.body,
   },
   label: {
-    fontFamily: fontFamily.jakartaMedium,
+    fontFamily: fontFamily.generalSansMedium,
     fontSize: 12,
     lineHeight: 16,
     letterSpacing: letterSpacing.label,
     textTransform: 'uppercase' as TextStyle['textTransform'],
   },
   caption: {
-    fontFamily: fontFamily.jakartaRegular,
+    fontFamily: fontFamily.generalSansRegular,
     fontSize: 11,
     lineHeight: 14,
     letterSpacing: 0.2,
   },
   button: {
-    fontFamily: fontFamily.jakartaMedium,
+    fontFamily: fontFamily.generalSansMedium,
     fontSize: 15,
     lineHeight: 20,
     letterSpacing: letterSpacing.control,

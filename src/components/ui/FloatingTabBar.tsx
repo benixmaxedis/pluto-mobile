@@ -2,18 +2,26 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { colors, shadows, borderRadius } from '@/lib/theme';
 
-function NowIcon({ color, size }: { color: string; size: number }) {
+export interface FloatingTabBarExtraProps {
+  onPlusPress?: () => void;
+}
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+
+function TodayIcon({ color, size }: { color: string; size: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x={3} y={4} width={18} height={17} rx={2} stroke={color} strokeWidth={2} />
+      <Path d="M3 9h18" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M8 2v3M16 2v3" stroke={color} strokeWidth={2} strokeLinecap="round" />
       <Path
-        d="M13 2L4 13h7v9l9-11h-7V2z"
+        d="M8 13h1M12 13h1M16 13h1M8 17h1M12 17h1"
         stroke={color}
         strokeWidth={2}
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
     </Svg>
   );
@@ -40,65 +48,22 @@ function ActionsIcon({ color, size }: { color: string; size: number }) {
   );
 }
 
-function RoutinesIcon({ color, size }: { color: string; size: number }) {
+function ReflectIcon({ color, size }: { color: string; size: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={2} />
       <Path
-        d="M17 2l4 4-4 4"
+        d="M12 7v5l3 3"
         stroke={color}
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d="M3 11V9a4 4 0 014-4h14"
+        d="M7.5 4.5l1.5 1.5M16.5 4.5L15 6M19.5 9l-1.5.5"
         stroke={color}
-        strokeWidth={2}
+        strokeWidth={1.5}
         strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M7 22l-4-4 4-4"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M21 13v2a4 4 0 01-4 4H3"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
-
-function CaptureIcon({ color, size }: { color: string; size: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={10} stroke={color} strokeWidth={2} />
-      <Path
-        d="M12 8v8M8 12h8"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
-
-function GuideIcon({ color, size }: { color: string; size: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Circle cx={12} cy={12} r={10} stroke={color} strokeWidth={2} />
-      <Path
-        d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
       />
     </Svg>
   );
@@ -107,14 +72,19 @@ function GuideIcon({ color, size }: { color: string; size: number }) {
 type IconComponent = (props: { color: string; size: number }) => React.ReactElement;
 
 const TAB_CONFIG: Record<string, { label: string; accent: string; Icon: IconComponent }> = {
-  now: { label: 'Now', accent: colors.emphasis.primary, Icon: NowIcon },
+  today: { label: 'Today', accent: colors.emphasis.primary, Icon: TodayIcon },
   actions: { label: 'Actions', accent: colors.actions.primary, Icon: ActionsIcon },
-  routines: { label: 'Routines', accent: colors.routines.primary, Icon: RoutinesIcon },
-  capture: { label: 'Capture', accent: colors.capture.primary, Icon: CaptureIcon },
-  guide: { label: 'Guide', accent: colors.guide.primary, Icon: GuideIcon },
+  reflect: { label: 'Reflect', accent: colors.guide.primary, Icon: ReflectIcon },
 };
 
-export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+// ── FloatingTabBar ─────────────────────────────────────────────────────────────
+
+export function FloatingTabBar({
+  state,
+  descriptors,
+  navigation,
+  onPlusPress,
+}: BottomTabBarProps & FloatingTabBarExtraProps) {
   const insets = useSafeAreaInsets();
 
   const visibleRoutes = state.routes.filter((route) => route.name in TAB_CONFIG);
@@ -127,11 +97,16 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         bottom: insets.bottom + 12,
         left: 20,
         right: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
       }}
     >
+      {/* Tab pill */}
       <View
         style={[
           {
+            flex: 1,
             flexDirection: 'row',
             backgroundColor: colors.surface,
             borderRadius: borderRadius.full,
@@ -205,6 +180,36 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
           );
         })}
       </View>
+
+      {/* Plus button — sits to the right of the tab pill, matches pill height */}
+      <Pressable
+        onPress={onPlusPress}
+        accessibilityRole="button"
+        accessibilityLabel="Create new"
+        style={({ pressed }: { pressed: boolean }) => [
+          {
+            width: 64,
+            height: 64,
+            borderRadius: borderRadius.full,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.border,
+            alignItems: 'center' as const,
+            justifyContent: 'center' as const,
+            opacity: pressed ? 0.7 : 1,
+          },
+          shadows.lg,
+        ]}
+      >
+        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M12 5v14M5 12h14"
+            stroke={colors.text.muted}
+            strokeWidth={2}
+            strokeLinecap="round"
+          />
+        </Svg>
+      </Pressable>
     </View>
   );
 }

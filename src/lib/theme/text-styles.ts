@@ -5,21 +5,21 @@ import { fontFamily, fontSize, letterSpacing, typographyStyles } from './typogra
 /** Semantic screen chrome — use instead of one-off fontSize/color on tab roots. */
 export const textStyles = {
   screenMeta: {
-    fontFamily: fontFamily.jakartaRegular,
+    fontFamily: fontFamily.generalSansRegular,
     fontSize: fontSize.sm,
     lineHeight: 18,
     letterSpacing: letterSpacing.body,
     color: colors.text.secondary,
   },
   screenTitle: {
-    fontFamily: fontFamily.jakartaSemibold,
+    fontFamily: fontFamily.generalSansSemibold,
     fontSize: fontSize.xl,
     lineHeight: 30,
     letterSpacing: letterSpacing.heading,
     color: colors.text.primary,
   },
   screenTrailing: {
-    fontFamily: fontFamily.jakartaRegular,
+    fontFamily: fontFamily.generalSansRegular,
     fontSize: fontSize.sm,
     lineHeight: 18,
     letterSpacing: letterSpacing.body,
