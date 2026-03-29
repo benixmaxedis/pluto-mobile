@@ -183,7 +183,7 @@ export function FloatingTabBar({
 
       {/* Plus button — sits to the right of the tab pill, matches pill height */}
       <Pressable
-        onPress={onPlusPress}
+        onPress={() => onPlusPress?.()}
         accessibilityRole="button"
         accessibilityLabel="Create new"
         style={({ pressed }: { pressed: boolean }) => [

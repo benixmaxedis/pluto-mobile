@@ -6,7 +6,6 @@ import { colors, spacing, textStyles } from '@/lib/theme';
 import { EmptyState } from '@/components/ui';
 import { NowGreeting } from '@/components/now/NowGreeting';
 import { NowWeekStrip } from '@/components/now/NowWeekStrip';
-import { NowDateEventsPanel } from '@/components/now/NowDateEventsPanel';
 import { NowDateSessionPanel } from '@/components/now/NowDateSessionPanel';
 import { NowSessionChips } from '@/components/now/NowSessionChips';
 import { NowTimeline } from '@/components/now/NowTimeline';
@@ -30,8 +29,9 @@ import {
   type NowSessionFilter,
 } from '@/features/now/use-now-queues';
 import { useMergedNowHistory } from '@/features/now/use-merged-session-history';
+import { useSyncCreateDrawerPreference } from '@/features/now/use-sync-create-drawer-preference';
 import { DATE_PANEL_LAYOUT_DEBUG_UI } from '@/components/now/debug-layout-borders';
-import { useDatePanelLayoutDebug } from '@/components/now/date-panel-layout-debug-context';
+
 
 const FLOATING_TAB_BAR_CLEARANCE = 12 + 64;
 
@@ -59,7 +59,6 @@ function sessionEndedForFilter(date: string, filter: NowSessionFilter): boolean 
 export default function TodayScreen() {
   useSessionEngine();
   const insets = useSafeAreaInsets();
-  const { panelLayoutBorders } = useDatePanelLayoutDebug();
   const { height: windowHeight } = useWindowDimensions();
   /** Greeting + week + date/events + session row — target ≤35% of viewport */
   const headerMaxHeight = Math.round(windowHeight * 0.35);
@@ -101,6 +100,17 @@ export default function TodayScreen() {
   );
 
   const queueKey = useMemo(() => displayQueue.map((i) => i.id).join('|'), [displayQueue]);
+
+  const createDrawerPreferred = useMemo(() => {
+    if (!expandedId) return null;
+    const item = displayQueue.find((i) => i.id === expandedId);
+    if (!item || isJournalQueueItem(item)) return null;
+    if (item.type === 'action') return 'action' as const;
+    if (item.type === 'routine_instance') return 'routine' as const;
+    return null;
+  }, [expandedId, queueKey, displayQueue]);
+
+  useSyncCreateDrawerPreference(createDrawerPreferred);
 
   useEffect(() => {
     if (displayQueue.length === 0) {
@@ -252,16 +262,12 @@ export default function TodayScreen() {
         <View style={{ maxHeight: headerMaxHeight, overflow: 'hidden' }}>
           <NowGreeting />
           <NowWeekStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
-          <NowDateEventsPanel
-            dateIso={selectedDate}
-            sessionFilter={sessionFilter}
-            panelLayoutBorders={panelLayoutBorders}
-          />
-          <NowDateSessionPanel
-            dateIso={selectedDate}
-            sessionFilter={sessionFilter}
-          />
         </View>
+
+        <NowDateSessionPanel
+          dateIso={selectedDate}
+          sessionFilter={sessionFilter}
+        />
 
         <NowSessionChips value={sessionFilter} onChange={setSessionFilter} />
 

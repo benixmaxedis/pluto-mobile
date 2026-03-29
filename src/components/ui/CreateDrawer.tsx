@@ -5,6 +5,7 @@ import {
   Pressable,
   Modal,
   Animated,
+  StyleSheet,
   TextInput as RNTextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +19,7 @@ import {
   StrategyFormSheet,
 } from '@/components/sheets';
 import { useCreateOpenLoop } from '@/features/capture/hooks/useOpenLoops';
+import { useAppStore } from '@/store/app-store';
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -111,6 +113,13 @@ const OPTIONS = [
 
 type OptionId = (typeof OPTIONS)[number]['id'];
 
+const styles = StyleSheet.create({
+  modalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+});
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface CreateDrawerProps {
@@ -120,6 +129,7 @@ interface CreateDrawerProps {
 
 export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
   const insets = useSafeAreaInsets();
+  const preferredOption = useAppStore((s) => s.createDrawerPreferredOption);
 
   // Animation
   const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -203,54 +213,52 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
           onRequestClose={onClose}
           statusBarTranslucent
         >
-          {/* Blurred backdrop */}
-          <Animated.View
-            style={{ flex: 1, opacity: backdropOpacity }}
-          >
-            <Pressable
-              style={{
-                flex: 1,
-                backgroundColor: 'rgba(6, 7, 12, 0.78)',
-              }}
-              onPress={onClose}
-            />
-          </Animated.View>
-
-          {/* Drawer */}
-          <Animated.View
-            style={[
-              {
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                backgroundColor: colors.surface,
-                borderTopLeftRadius: borderRadius.xl,
-                borderTopRightRadius: borderRadius.xl,
-                borderTopWidth: 1,
-                borderLeftWidth: 1,
-                borderRightWidth: 1,
-                borderColor: colors.border,
-                paddingBottom: insets.bottom + spacing.md,
-                transform: [{ translateY: drawerTranslateY }],
-              },
-              shadows.lg,
-            ]}
-          >
-            {/* Handle bar */}
-            <View style={{ alignItems: 'center', paddingTop: spacing.sm, paddingBottom: spacing.xs }}>
-              <View
-                style={{
-                  width: 36,
-                  height: 4,
-                  backgroundColor: colors.border,
-                  borderRadius: borderRadius.full,
-                }}
+          {/* Single root view — required on Android for transparent modals */}
+          <View style={styles.modalRoot}>
+            <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: backdropOpacity }]}>
+              <Pressable
+                style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(6, 7, 12, 0.78)' }]}
+                onPress={onClose}
               />
-            </View>
+            </Animated.View>
 
-            {/* Options */}
-            {OPTIONS.map((opt, index) => (
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  backgroundColor: colors.surface,
+                  borderTopLeftRadius: borderRadius.xl,
+                  borderTopRightRadius: borderRadius.xl,
+                  borderTopWidth: 1,
+                  borderLeftWidth: 1,
+                  borderRightWidth: 1,
+                  borderColor: colors.border,
+                  paddingBottom: insets.bottom + spacing.md,
+                  transform: [{ translateY: drawerTranslateY }],
+                },
+                shadows.lg,
+              ]}
+            >
+              {/* Handle bar */}
+              <View style={{ alignItems: 'center', paddingTop: spacing.sm, paddingBottom: spacing.xs }}>
+                <View
+                  style={{
+                    width: 36,
+                    height: 4,
+                    backgroundColor: colors.border,
+                    borderRadius: borderRadius.full,
+                  }}
+                />
+              </View>
+
+              {/* Options */}
+              {OPTIONS.map((opt, index) => {
+                const IconComponent = opt.Icon;
+                const matchesTimeline = preferredOption === opt.id;
+                return (
               <Pressable
                 key={opt.id}
                 onPress={() => handleSelect(opt.id)}
@@ -260,9 +268,15 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
                   gap: spacing.sm,
                   paddingHorizontal: spacing.lg,
                   paddingVertical: spacing.sm,
-                  backgroundColor: pressed ? colors.surfaceRaised : 'transparent',
+                  backgroundColor: pressed
+                    ? colors.surfaceRaised
+                    : matchesTimeline
+                      ? colors.surfaceRaised + '99'
+                      : 'transparent',
                   borderTopWidth: index === 0 ? 0 : 1,
                   borderTopColor: colors.borderSubtle,
+                  borderLeftWidth: matchesTimeline ? 3 : 0,
+                  borderLeftColor: matchesTimeline ? opt.color : 'transparent',
                 })}
               >
                 {/* Icon pill */}
@@ -277,7 +291,7 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
                     flexShrink: 0,
                   }}
                 >
-                  <opt.Icon color={opt.color} />
+                  <IconComponent color={opt.color} />
                 </View>
 
                 {/* Labels */}
@@ -315,8 +329,10 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
                   />
                 </Svg>
               </Pressable>
-            ))}
-          </Animated.View>
+                );
+              })}
+            </Animated.View>
+          </View>
         </Modal>
       )}
 
@@ -328,25 +344,26 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
         onRequestClose={() => setLoopSheetOpen(false)}
         statusBarTranslucent
       >
-        <Pressable
-          style={{ flex: 1, backgroundColor: 'rgba(6, 7, 12, 0.7)' }}
-          onPress={() => setLoopSheetOpen(false)}
-        />
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderTopLeftRadius: borderRadius.xl,
-            borderTopRightRadius: borderRadius.xl,
-            borderTopWidth: 1,
-            borderLeftWidth: 1,
-            borderRightWidth: 1,
-            borderColor: colors.border,
-            paddingHorizontal: spacing.lg,
-            paddingTop: spacing.sm,
-            paddingBottom: insets.bottom + spacing.lg,
-            gap: spacing.sm,
-          }}
-        >
+        <View style={styles.modalRoot}>
+          <Pressable
+            style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(6, 7, 12, 0.7)' }]}
+            onPress={() => setLoopSheetOpen(false)}
+          />
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderTopLeftRadius: borderRadius.xl,
+              borderTopRightRadius: borderRadius.xl,
+              borderTopWidth: 1,
+              borderLeftWidth: 1,
+              borderRightWidth: 1,
+              borderColor: colors.border,
+              paddingHorizontal: spacing.lg,
+              paddingTop: spacing.sm,
+              paddingBottom: insets.bottom + spacing.lg,
+              gap: spacing.sm,
+            }}
+          >
           {/* Handle */}
           <View style={{ alignItems: 'center', marginBottom: spacing.xs }}>
             <View
@@ -412,6 +429,7 @@ export function CreateDrawer({ visible, onClose }: CreateDrawerProps) {
               Capture
             </Text>
           </Pressable>
+          </View>
         </View>
       </Modal>
 

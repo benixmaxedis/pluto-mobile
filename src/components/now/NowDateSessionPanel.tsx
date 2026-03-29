@@ -7,6 +7,8 @@ import {
   getSessionWindowLabels,
 } from '@/features/now/session-time-format';
 import type { NowSessionFilter } from '@/features/now/use-now-queues';
+import { PanelDebugOutline } from '@/components/now/debug-panel-outline';
+import { useDatePanelLayoutDebug } from '@/components/now/date-panel-layout-debug-context';
 
 type Props = {
   dateIso: string;
@@ -14,15 +16,19 @@ type Props = {
 };
 
 const DATE_DAY_SIZE = 72;
-const DATE_DAY_LH = 74;
+const DATE_DAY_LH = 76;
 const DATE_MONTH_SIZE = 48;
-const DATE_MONTH_LH = 52;
+const DATE_MONTH_LH = 48;
 
-const TIME_SIZE = 36;
-const TIME_LH = 40;
+const TIME_SIZE = 22;
+const TIME_LH = 26;
 
 const HEADING_SIZE = 15;
 const HEADING_LH = 19;
+
+/** Negative margin on day pulls month closer; account for it in total height. */
+const DAY_PULL = -12;
+const DATE_BLOCK_H = DATE_DAY_LH + DAY_PULL + DATE_MONTH_LH;
 
 const RAIL_W = 14;
 const RAIL_MARGIN_RIGHT = 10;
@@ -56,29 +62,37 @@ const toStyle = {
 } as const;
 
 export function NowDateSessionPanel({ dateIso, sessionFilter }: Props) {
+  const { panelLayoutBorders: b } = useDatePanelLayoutDebug();
+
   const [dayW, setDayW] = useState(0);
   const [monthW, setMonthW] = useState(0);
   const sharedW = dayW > 0 && monthW > 0 ? Math.max(dayW, monthW) : undefined;
 
-  const railRef = useRef<View>(null);
+  const timesAreaRef = useRef<View>(null);
+  const railColumnRef = useRef<View>(null);
   const fromTimeRef = useRef<Text | null>(null);
   const toTimeRef = useRef<Text | null>(null);
   const [railY, setRailY] = useState<{ from: number; to: number } | null>(null);
 
   const measureRail = useCallback(() => {
-    const rail = railRef.current;
+    const area = timesAreaRef.current;
+    const railCol = railColumnRef.current;
     const fromT = fromTimeRef.current;
     const toT = toTimeRef.current;
-    if (!rail || !fromT || !toT) return;
+    if (!area || !railCol || !fromT || !toT) return;
 
+    let railColTop = 0;
     let fromMid: number | null = null;
     let toMid: number | null = null;
     const commit = () => {
-      if (fromMid != null && toMid != null) setRailY({ from: fromMid, to: toMid });
+      if (fromMid != null && toMid != null) {
+        setRailY({ from: fromMid - railColTop, to: toMid - railColTop });
+      }
     };
 
-    fromT.measureLayout(rail, (_x, y, _w, h) => { fromMid = y + h / 2; commit(); }, () => {});
-    toT.measureLayout(rail, (_x, y, _w, h) => { toMid = y + h / 2; commit(); }, () => {});
+    railCol.measureLayout(area, (_x, y) => { railColTop = y; }, () => {});
+    fromT.measureLayout(area, (_x, y, _w, h) => { fromMid = y + h / 2; commit(); }, () => {});
+    toT.measureLayout(area, (_x, y, _w, h) => { toMid = y + h / 2; commit(); }, () => {});
   }, []);
 
   const onTimesLayout = useCallback(() => {
@@ -99,22 +113,28 @@ export function NowDateSessionPanel({ dateIso, sessionFilter }: Props) {
   const toLabel = sessionWindow.to.toUpperCase();
 
   return (
-    <View style={{ paddingHorizontal: spacing.lg }}>
+    <PanelDebugOutline color="#ec4899" enabled={b} style={{ paddingHorizontal: spacing.lg }}>
       {/* Main two-column row */}
-      <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>
-        {/* Left column — 60% */}
-        <View
-          style={{
-            flexGrow: 0,
-            flexShrink: 0,
-            flexBasis: '60%',
-          }}
+      <PanelDebugOutline
+        color="#8b5cf6"
+        enabled={b}
+        style={{ flexDirection: 'row', alignItems: 'flex-start' }}
+      >
+        {/* Left column */}
+        <PanelDebugOutline
+          color="#ef4444"
+          enabled={b}
+          style={{ flexGrow: 0, flexShrink: 0, flexBasis: '45%' }}
         >
-          <Text style={headingStyle} numberOfLines={1}>
-            {weekday}
-          </Text>
+          <PanelDebugOutline color="#fbbf24" enabled={b} style={{ alignSelf: 'flex-start' }}>
+            <Text style={headingStyle} numberOfLines={1}>
+              {weekday}
+            </Text>
+          </PanelDebugOutline>
 
-          <View
+          <PanelDebugOutline
+            color="#34d399"
+            enabled={b}
             style={{
               alignSelf: 'flex-start',
               marginTop: spacing.xs,
@@ -122,156 +142,167 @@ export function NowDateSessionPanel({ dateIso, sessionFilter }: Props) {
               alignItems: 'center',
             }}
           >
-            <Text
-              onLayout={(e: LayoutChangeEvent) => {
-                const w = e.nativeEvent.layout.width;
-                if (w > 0) setDayW((prev) => (prev === w ? prev : w));
-              }}
-              style={{
-                fontFamily: fontFamily.michroma,
-                fontSize: DATE_DAY_SIZE,
-                lineHeight: DATE_DAY_LH,
-                letterSpacing: letterSpacing.displayTight,
-                color: blue,
-                textAlign: 'center',
-              }}
-              numberOfLines={1}
-            >
-              {dayNum}
-            </Text>
-            <Text
-              onLayout={(e: LayoutChangeEvent) => {
-                const w = e.nativeEvent.layout.width;
-                if (w > 0) setMonthW((prev) => (prev === w ? prev : w));
-              }}
-              style={{
-                fontFamily: fontFamily.michroma,
-                fontSize: DATE_MONTH_SIZE,
-                lineHeight: DATE_MONTH_LH,
-                letterSpacing: letterSpacing.displayTight,
-                color: blue,
-                textAlign: 'center',
-                marginTop: spacing.hairline,
-              }}
-              numberOfLines={1}
-            >
-              {month}
-            </Text>
-          </View>
-        </View>
+            <PanelDebugOutline color="#10b981" enabled={b}>
+              <Text
+                onLayout={(e: LayoutChangeEvent) => {
+                  const w = e.nativeEvent.layout.width;
+                  if (w > 0) setDayW((prev) => (prev === w ? prev : w));
+                }}
+                style={{
+                  fontFamily: fontFamily.michroma,
+                  fontSize: DATE_DAY_SIZE,
+                  lineHeight: DATE_DAY_LH,
+                  letterSpacing: letterSpacing.displayTight,
+                  color: blue,
+                  textAlign: 'center',
+                  marginBottom: DAY_PULL,
+                }}
+                numberOfLines={1}
+              >
+                {dayNum}
+              </Text>
+            </PanelDebugOutline>
+            <PanelDebugOutline color="#059669" enabled={b}>
+              <Text
+                onLayout={(e: LayoutChangeEvent) => {
+                  const w = e.nativeEvent.layout.width;
+                  if (w > 0) setMonthW((prev) => (prev === w ? prev : w));
+                }}
+                style={{
+                  fontFamily: fontFamily.michroma,
+                  fontSize: DATE_MONTH_SIZE,
+                  lineHeight: DATE_MONTH_LH,
+                  letterSpacing: letterSpacing.displayTight,
+                  color: blue,
+                  textAlign: 'center',
+                }}
+                numberOfLines={1}
+              >
+                {month}
+              </Text>
+            </PanelDebugOutline>
+          </PanelDebugOutline>
+        </PanelDebugOutline>
 
-        {/* Right column — 40% */}
-        <View
-          style={{
-            flexGrow: 0,
-            flexShrink: 0,
-            flexBasis: '40%',
-          }}
+        {/* Right column */}
+        <PanelDebugOutline
+          color="#f472b6"
+          enabled={b}
+          style={{ flexGrow: 0, flexShrink: 0, flexBasis: '55%' }}
         >
-          <Text style={headingStyle} numberOfLines={1}>
-            Events from
-          </Text>
+          <PanelDebugOutline color="#fde047" enabled={b} style={{ alignSelf: 'flex-start' }}>
+            <Text style={headingStyle} numberOfLines={1}>
+              Events from
+            </Text>
+          </PanelDebugOutline>
 
-          {/* Times area: rail + times stack */}
-          <View
-            ref={railRef}
-            collapsable={false}
-            onLayout={onTimesLayout}
+          {/* Times area */}
+          <PanelDebugOutline
+            color="#38bdf8"
+            enabled={b}
             style={{
-              flex: 1,
+              height: DATE_BLOCK_H,
               flexDirection: 'row',
               alignItems: 'stretch',
               marginTop: spacing.xs,
             }}
           >
-            {/* Vertical rail */}
             <View
-              style={{
-                width: RAIL_W,
-                marginRight: RAIL_MARGIN_RIGHT,
-                position: 'relative',
-              }}
+              ref={timesAreaRef}
+              collapsable={false}
+              onLayout={onTimesLayout}
+              style={{ flex: 1, flexDirection: 'row', alignItems: 'stretch' }}
             >
-              {railY != null && (() => {
-                const y1 = railY.from;
-                const y2 = railY.to;
-                const lineTop = Math.min(y1, y2);
-                const lineH = Math.max(Math.abs(y2 - y1), 1);
-                return (
-                  <>
-                    {/* Open circle — top */}
-                    <View
-                      style={{
-                        position: 'absolute',
-                        left: (RAIL_W - NODE) / 2,
-                        top: y1 - NODE / 2,
-                        width: NODE,
-                        height: NODE,
-                        borderRadius: NODE / 2,
-                        borderWidth: 2,
-                        borderColor: blue,
-                        backgroundColor: 'transparent',
-                      }}
-                    />
-                    {/* Connecting line */}
-                    <View
-                      style={{
-                        position: 'absolute',
-                        left: (RAIL_W - LINE_W) / 2,
-                        top: lineTop,
-                        width: LINE_W,
-                        height: lineH,
-                        backgroundColor: blue,
-                        opacity: 0.9,
-                        borderRadius: 1,
-                      }}
-                    />
-                    {/* Filled circle — bottom */}
-                    <View
-                      style={{
-                        position: 'absolute',
-                        left: (RAIL_W - NODE) / 2,
-                        top: y2 - NODE / 2,
-                        width: NODE,
-                        height: NODE,
-                        borderRadius: NODE / 2,
-                        backgroundColor: blue,
-                      }}
-                    />
-                  </>
-                );
-              })()}
-            </View>
-
-            {/* Times stack — space-between distributes top time / "to" / bottom time */}
-            <View style={{ flex: 1, justifyContent: 'space-between' }}>
-              <Text
-                ref={fromTimeRef}
-                style={timeStyle}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.65}
-                onLayout={onTimesLayout}
+              {/* Vertical rail */}
+              <View
+                ref={railColumnRef}
+                collapsable={false}
+                style={{
+                  width: RAIL_W,
+                  marginRight: RAIL_MARGIN_RIGHT,
+                  position: 'relative',
+                }}
               >
-                {fromLabel}
-              </Text>
+                {railY != null && (() => {
+                  const y1 = railY.from;
+                  const y2 = railY.to;
+                  const lineTop = Math.min(y1, y2);
+                  const lineH = Math.max(Math.abs(y2 - y1), 1);
+                  return (
+                    <>
+                      <View
+                        style={{
+                          position: 'absolute',
+                          left: (RAIL_W - NODE) / 2,
+                          top: y1 - NODE / 2,
+                          width: NODE,
+                          height: NODE,
+                          borderRadius: NODE / 2,
+                          borderWidth: 2,
+                          borderColor: blue,
+                          backgroundColor: 'transparent',
+                        }}
+                      />
+                      <View
+                        style={{
+                          position: 'absolute',
+                          left: (RAIL_W - LINE_W) / 2,
+                          top: lineTop,
+                          width: LINE_W,
+                          height: lineH,
+                          backgroundColor: blue,
+                          opacity: 0.9,
+                          borderRadius: 1,
+                        }}
+                      />
+                      <View
+                        style={{
+                          position: 'absolute',
+                          left: (RAIL_W - NODE) / 2,
+                          top: y2 - NODE / 2,
+                          width: NODE,
+                          height: NODE,
+                          borderRadius: NODE / 2,
+                          backgroundColor: blue,
+                        }}
+                      />
+                    </>
+                  );
+                })()}
+              </View>
 
-              <Text style={toStyle}>to</Text>
+              {/* Times stack */}
+              <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                <PanelDebugOutline color="#2dd4bf" enabled={b}>
+                  <Text
+                    ref={fromTimeRef}
+                    style={timeStyle}
+                    numberOfLines={1}
+                    onLayout={onTimesLayout}
+                  >
+                    {fromLabel}
+                  </Text>
+                </PanelDebugOutline>
 
-              <Text
-                ref={toTimeRef}
-                style={timeStyle}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.65}
-                onLayout={onTimesLayout}
-              >
-                {toLabel}
-              </Text>
+                <PanelDebugOutline color="#c084fc" enabled={b} style={{ alignSelf: 'flex-start' }}>
+                  <Text style={toStyle}>to</Text>
+                </PanelDebugOutline>
+
+                <PanelDebugOutline color="#2dd4bf" enabled={b}>
+                  <Text
+                    ref={toTimeRef}
+                    style={timeStyle}
+                    numberOfLines={1}
+                    onLayout={onTimesLayout}
+                  >
+                    {toLabel}
+                  </Text>
+                </PanelDebugOutline>
+              </View>
             </View>
-          </View>
-        </View>
-      </View>
-    </View>
+          </PanelDebugOutline>
+        </PanelDebugOutline>
+      </PanelDebugOutline>
+    </PanelDebugOutline>
   );
 }

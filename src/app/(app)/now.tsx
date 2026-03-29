@@ -6,11 +6,10 @@ import { colors, spacing, textStyles } from '@/lib/theme';
 import { EmptyState } from '@/components/ui';
 import { NowGreeting } from '@/components/now/NowGreeting';
 import { NowWeekStrip } from '@/components/now/NowWeekStrip';
-import { NowDateEventsPanel } from '@/components/now/NowDateEventsPanel';
 import { NowDateSessionPanel } from '@/components/now/NowDateSessionPanel';
 import { NowSessionChips } from '@/components/now/NowSessionChips';
 import { DATE_PANEL_LAYOUT_DEBUG_UI, dbgBorder } from '@/components/now/debug-layout-borders';
-import { useDatePanelLayoutDebug } from '@/components/now/date-panel-layout-debug-context';
+
 import { NowTimeline } from '@/components/now/NowTimeline';
 import { SessionHistoryRow } from '@/components/cards/SessionHistoryRow';
 import { JournalFormSheet } from '@/components/sheets';
@@ -32,6 +31,7 @@ import {
   type NowSessionFilter,
 } from '@/features/now/use-now-queues';
 import { useMergedNowHistory } from '@/features/now/use-merged-session-history';
+import { useSyncCreateDrawerPreference } from '@/features/now/use-sync-create-drawer-preference';
 
 function parseJournalAnswers(entry: { answersJson?: unknown } | null | undefined): Record<string, unknown> | null {
   if (!entry?.answersJson) return null;
@@ -69,8 +69,6 @@ export default function NowScreen() {
 
   const [sessionFilter, setSessionFilter] = useState<NowSessionFilter>(currentSession);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const { panelLayoutBorders } = useDatePanelLayoutDebug();
-
   useEffect(() => {
     if (sessionFilter !== 'all') {
       setCurrentSession(sessionFilter);
@@ -102,6 +100,17 @@ export default function NowScreen() {
   );
 
   const queueKey = useMemo(() => displayQueue.map((i) => i.id).join('|'), [displayQueue]);
+
+  const createDrawerPreferred = useMemo(() => {
+    if (!expandedId) return null;
+    const item = displayQueue.find((i) => i.id === expandedId);
+    if (!item || isJournalQueueItem(item)) return null;
+    if (item.type === 'action') return 'action' as const;
+    if (item.type === 'routine_instance') return 'routine' as const;
+    return null;
+  }, [expandedId, queueKey, displayQueue]);
+
+  useSyncCreateDrawerPreference(createDrawerPreferred);
 
   useEffect(() => {
     if (displayQueue.length === 0) {
@@ -258,16 +267,12 @@ export default function NowScreen() {
         >
           <NowGreeting />
           <NowWeekStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
-          <NowDateEventsPanel
-            dateIso={selectedDate}
-            sessionFilter={sessionFilter}
-            panelLayoutBorders={panelLayoutBorders}
-          />
-          <NowDateSessionPanel
-            dateIso={selectedDate}
-            sessionFilter={sessionFilter}
-          />
         </View>
+
+        <NowDateSessionPanel
+          dateIso={selectedDate}
+          sessionFilter={sessionFilter}
+        />
 
         <NowSessionChips value={sessionFilter} onChange={setSessionFilter} />
 
