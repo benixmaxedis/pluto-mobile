@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, textStyles } from '@/lib/theme';
 import { EmptyState } from '@/components/ui';
@@ -29,6 +29,10 @@ import {
   type NowSessionFilter,
 } from '@/features/now/use-now-queues';
 import { useMergedNowHistory } from '@/features/now/use-merged-session-history';
+import { DATE_PANEL_LAYOUT_DEBUG_UI } from '@/components/now/debug-layout-borders';
+import { useDatePanelLayoutDebug } from '@/components/now/date-panel-layout-debug-context';
+
+const FLOATING_TAB_BAR_CLEARANCE = 12 + 64;
 
 function parseJournalAnswers(entry: { answersJson?: unknown } | null | undefined): Record<string, unknown> | null {
   if (!entry?.answersJson) return null;
@@ -53,6 +57,8 @@ function sessionEndedForFilter(date: string, filter: NowSessionFilter): boolean 
 
 export default function TodayScreen() {
   useSessionEngine();
+  const insets = useSafeAreaInsets();
+  const { panelLayoutBorders } = useDatePanelLayoutDebug();
   const { height: windowHeight } = useWindowDimensions();
   /** Greeting + week + date/events + session row — target ≤35% of viewport */
   const headerMaxHeight = Math.round(windowHeight * 0.35);
@@ -226,18 +232,30 @@ export default function TodayScreen() {
     setExpandedId((prev) => (prev === id ? null : id));
   }, []);
 
+  const scrollBottomPad =
+    insets.bottom +
+    FLOATING_TAB_BAR_CLEARANCE +
+    spacing.xl +
+    (DATE_PANEL_LAYOUT_DEBUG_UI ? 52 : 0);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: spacing['3xl'] }}
+        contentContainerStyle={{
+          paddingBottom: Math.max(spacing['3xl'], scrollBottomPad),
+        }}
       >
         <View style={{ maxHeight: headerMaxHeight, overflow: 'hidden' }}>
           <NowGreeting />
           <NowWeekStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
-          <NowDateEventsPanel dateIso={selectedDate} sessionFilter={sessionFilter} />
+          <NowDateEventsPanel
+            dateIso={selectedDate}
+            sessionFilter={sessionFilter}
+            panelLayoutBorders={panelLayoutBorders}
+          />
         </View>
 
         <NowSessionChips value={sessionFilter} onChange={setSessionFilter} />

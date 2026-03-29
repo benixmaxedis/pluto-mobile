@@ -29,11 +29,13 @@ export function dbgTextBorder(color: string): TextStyle {
   return outline(color, 2);
 }
 
+/** Prefer `PanelDebugOutline` — real borders shrink layout and clip nested Text. */
 export function dbgPanelBorder(color: string, enabled: boolean): ViewStyle {
   if (!enabled) return {};
   return outline(color, PANEL_BORDER_W);
 }
 
+/** Prefer wrapping Text in `PanelDebugOutline` — border on Text often clips glyphs. */
 export function dbgPanelTextBorder(color: string, enabled: boolean): TextStyle {
   if (!enabled) return {};
   return outline(color, PANEL_BORDER_W);

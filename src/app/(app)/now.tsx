@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, Switch, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, textStyles } from '@/lib/theme';
@@ -8,11 +8,8 @@ import { NowGreeting } from '@/components/now/NowGreeting';
 import { NowWeekStrip } from '@/components/now/NowWeekStrip';
 import { NowDateEventsPanel } from '@/components/now/NowDateEventsPanel';
 import { NowSessionChips } from '@/components/now/NowSessionChips';
-import {
-  DATE_PANEL_LAYOUT_DEBUG_UI,
-  DEBUG_DATE_PANEL_BORDERS_INITIAL,
-  dbgBorder,
-} from '@/components/now/debug-layout-borders';
+import { DATE_PANEL_LAYOUT_DEBUG_UI, dbgBorder } from '@/components/now/debug-layout-borders';
+import { useDatePanelLayoutDebug } from '@/components/now/date-panel-layout-debug-context';
 import { NowTimeline } from '@/components/now/NowTimeline';
 import { SessionHistoryRow } from '@/components/cards/SessionHistoryRow';
 import { JournalFormSheet } from '@/components/sheets';
@@ -71,7 +68,7 @@ export default function NowScreen() {
 
   const [sessionFilter, setSessionFilter] = useState<NowSessionFilter>(currentSession);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [panelLayoutBorders, setPanelLayoutBorders] = useState(DEBUG_DATE_PANEL_BORDERS_INITIAL);
+  const { panelLayoutBorders } = useDatePanelLayoutDebug();
 
   useEffect(() => {
     if (sessionFilter !== 'all') {
@@ -242,8 +239,6 @@ export default function NowScreen() {
     spacing.xl +
     (DATE_PANEL_LAYOUT_DEBUG_UI ? 52 : 0);
 
-  const debugBarBottom = insets.bottom + FLOATING_TAB_BAR_CLEARANCE + 6;
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
@@ -323,48 +318,6 @@ export default function NowScreen() {
           </View>
         )}
       </ScrollView>
-
-      {DATE_PANEL_LAYOUT_DEBUG_UI && (
-        <View
-          pointerEvents="box-none"
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: debugBarBottom,
-            zIndex: 50,
-            alignItems: 'center',
-          }}
-        >
-          <View
-            pointerEvents="auto"
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: spacing.sm,
-              paddingVertical: spacing.sm,
-              paddingHorizontal: spacing.md,
-              marginHorizontal: spacing.lg,
-              maxWidth: 360,
-              width: '100%',
-              backgroundColor: colors.surfaceRaised,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: colors.borderSubtle,
-            }}
-          >
-            <Text style={{ fontSize: 13, color: colors.text.secondary }}>Date panel borders</Text>
-            <Switch
-              accessibilityLabel="Toggle date panel layout borders"
-              value={panelLayoutBorders}
-              onValueChange={setPanelLayoutBorders}
-              trackColor={{ false: colors.border, true: colors.emphasis.primary + '88' }}
-              thumbColor={panelLayoutBorders ? colors.emphasis.primary : colors.text.muted}
-            />
-          </View>
-        </View>
-      )}
 
       <JournalFormSheet
         ref={journalSheetRef}

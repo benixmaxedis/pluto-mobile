@@ -7,7 +7,7 @@ import {
   getSessionWindowLabels,
 } from '@/features/now/session-time-format';
 import type { NowSessionFilter } from '@/features/now/use-now-queues';
-import { dbgPanelBorder, dbgPanelTextBorder } from '@/components/now/debug-layout-borders';
+import { PanelDebugOutline } from '@/components/now/debug-panel-outline';
 
 type Props = {
   dateIso: string;
@@ -28,8 +28,6 @@ const WEEKDAY_LH = 19;
 const RAIL_W = 14;
 const NODE = 8;
 const LINE_W = 2;
-
-const DATE_PANEL_COLUMN_H = 150;
 
 const eventMetaLabel = {
   fontFamily: fontFamily.generalSansMedium,
@@ -99,83 +97,70 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
   const month = format(d, 'MMM');
 
   return (
-    <View
-      style={[
-        { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, marginBottom: spacing.xs },
-        dbgPanelBorder('#ec4899', b),
-      ]}
+    <PanelDebugOutline
+      color="#ec4899"
+      enabled={b}
+      style={{ paddingHorizontal: spacing.lg }}
     >
       {/* Two-column row */}
-      <View
-        style={[
-          { flexDirection: 'row', alignItems: 'stretch', gap: spacing.xs },
-          dbgPanelBorder('#8b5cf6', b),
-        ]}
+      <PanelDebugOutline
+        color="#8b5cf6"
+        enabled={b}
+        style={{ flexDirection: 'row', alignItems: 'stretch', gap: spacing.xs }}
       >
         {/* Left: day + date stack — takes all remaining space */}
-        <View
-          style={[
-            {
-              flex: 1,
-              minWidth: 0,
-              minHeight: DATE_PANEL_COLUMN_H,
-              height: DATE_PANEL_COLUMN_H,
-              justifyContent: 'center',
-            },
-            dbgPanelBorder('#ef4444', b),
-          ]}
+        <PanelDebugOutline
+          color="#ef4444"
+          enabled={b}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            justifyContent: 'flex-start',
+          }}
         >
-          <Text
-            style={[
-              {
+          <PanelDebugOutline color="#fbbf24" enabled={b} style={{ alignSelf: 'flex-start' }}>
+            <Text
+              style={{
                 fontFamily: fontFamily.generalSansMedium,
                 fontSize: WEEKDAY_SIZE,
                 lineHeight: WEEKDAY_LH,
                 letterSpacing: letterSpacing.label,
                 color: blue,
-                marginBottom: spacing.xs,
-              },
-              dbgPanelTextBorder('#fbbf24', b),
-            ]}
-            numberOfLines={1}
-          >
-            {weekday}
-          </Text>
+              }}
+              numberOfLines={1}
+            >
+              {weekday}
+            </Text>
+          </PanelDebugOutline>
 
           {/* Date block — self-measured to align day/month widths */}
-          <View
-            style={[
-              { alignSelf: 'flex-start', width: dateBlockW },
-              dbgPanelBorder('#34d399', b),
-            ]}
-          >
-            <Text
-              onLayout={(e: LayoutChangeEvent) => {
-                const w = e.nativeEvent.layout.width;
-                if (w > 0) setDayIntrinsicW((prev) => (prev === w ? prev : w));
-              }}
-              style={[
-                {
+          <PanelDebugOutline color="#34d399" enabled={b} style={{ alignSelf: 'flex-start', width: dateBlockW }}>
+            <PanelDebugOutline color="#10b981" enabled={b}>
+              <Text
+                onLayout={(e: LayoutChangeEvent) => {
+                  const w = e.nativeEvent.layout.width;
+                  if (w > 0) setDayIntrinsicW((prev) => (prev === w ? prev : w));
+                }}
+                style={{
                   fontFamily: fontFamily.michroma,
                   fontSize: DATE_DAY,
                   lineHeight: DATE_DAY_LH,
                   letterSpacing: letterSpacing.displayTight,
                   color: blue,
                   textAlign: 'center',
-                },
-                dbgPanelTextBorder('#10b981', b),
-              ]}
-              numberOfLines={1}
-            >
-              {dayNum}
-            </Text>
-            <Text
-              onLayout={(e: LayoutChangeEvent) => {
-                const w = e.nativeEvent.layout.width;
-                if (w > 0) setMonthIntrinsicW((prev) => (prev === w ? prev : w));
-              }}
-              style={[
-                {
+                }}
+                numberOfLines={1}
+              >
+                {dayNum}
+              </Text>
+            </PanelDebugOutline>
+            <PanelDebugOutline color="#059669" enabled={b}>
+              <Text
+                onLayout={(e: LayoutChangeEvent) => {
+                  const w = e.nativeEvent.layout.width;
+                  if (w > 0) setMonthIntrinsicW((prev) => (prev === w ? prev : w));
+                }}
+                style={{
                   fontFamily: fontFamily.michroma,
                   fontSize: DATE_MONTH,
                   lineHeight: DATE_MONTH_LH,
@@ -183,15 +168,14 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
                   color: blue,
                   marginTop: MONTH_PULL_UP,
                   textAlign: 'center',
-                },
-                dbgPanelTextBorder('#059669', b),
-              ]}
-              numberOfLines={1}
-            >
-              {month}
-            </Text>
-          </View>
-        </View>
+                }}
+                numberOfLines={1}
+              >
+                {month}
+              </Text>
+            </PanelDebugOutline>
+          </PanelDebugOutline>
+        </PanelDebugOutline>
 
         {/* Right: rail + times — fixed basis so it never competes with left */}
         <View
@@ -200,18 +184,15 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
             flexShrink: 0,
             flexGrow: 0,
             flexBasis: '46%',
-            minHeight: DATE_PANEL_COLUMN_H,
-            height: DATE_PANEL_COLUMN_H,
             flexDirection: 'row',
             alignItems: 'stretch',
           }}
           onLayout={() => requestAnimationFrame(measureTimeCenters)}
         >
-          {/* Vertical rail */}
+          {/* Vertical rail — stretches to match times column / row height */}
           <View
             style={{
               width: RAIL_W,
-              height: DATE_PANEL_COLUMN_H,
               marginRight: spacing.sm,
               position: 'relative',
             }}
@@ -266,60 +247,50 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
           </View>
 
           {/* Times column */}
-          <View
-            style={[
-              {
-                flex: 1,
-                minWidth: 0,
-                height: DATE_PANEL_COLUMN_H,
-                justifyContent: 'center',
-              },
-              dbgPanelBorder('#f472b6', b),
-            ]}
+          <PanelDebugOutline
+            color="#f472b6"
+            enabled={b}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              justifyContent: 'flex-start',
+            }}
           >
-            <Text
-              style={[eventMetaLabel, { marginBottom: spacing.xs }, dbgPanelTextBorder('#fde047', b)]}
-            >
-              Events from
-            </Text>
-            <View ref={fromTimeWrapRef} collapsable={false} style={dbgPanelBorder('#2dd4bf', b)}>
-              <Text
-                style={[timeTextStyle, dbgPanelTextBorder('#5eead4', b)]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
-                onLayout={() => requestAnimationFrame(measureTimeCenters)}
-              >
-                {sessionWindow.from}
-              </Text>
+            <PanelDebugOutline color="#fde047" enabled={b}>
+              <Text style={eventMetaLabel}>Events from</Text>
+            </PanelDebugOutline>
+            <View ref={fromTimeWrapRef} collapsable={false}>
+              <PanelDebugOutline color="#2dd4bf" enabled={b}>
+                <Text
+                  style={timeTextStyle}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                  onLayout={() => requestAnimationFrame(measureTimeCenters)}
+                >
+                  {sessionWindow.from}
+                </Text>
+              </PanelDebugOutline>
             </View>
-            <View
-              style={[
-                {
-                  marginVertical: spacing.sm,
-                  minHeight: spacing.md,
-                  justifyContent: 'center',
-                  alignItems: 'flex-start',
-                },
-                dbgPanelBorder('#c084fc', b),
-              ]}
-            >
-              <Text style={[eventMetaLabel, dbgPanelTextBorder('#fb923c', b)]}>to</Text>
+            <PanelDebugOutline color="#c084fc" enabled={b} style={{ alignItems: 'flex-start' }}>
+              <Text style={eventMetaLabel}>to</Text>
+            </PanelDebugOutline>
+            <View ref={toTimeWrapRef} collapsable={false}>
+              <PanelDebugOutline color="#38bdf8" enabled={b}>
+                <Text
+                  style={timeTextStyle}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                  onLayout={() => requestAnimationFrame(measureTimeCenters)}
+                >
+                  {sessionWindow.to}
+                </Text>
+              </PanelDebugOutline>
             </View>
-            <View ref={toTimeWrapRef} collapsable={false} style={dbgPanelBorder('#38bdf8', b)}>
-              <Text
-                style={[timeTextStyle, dbgPanelTextBorder('#7dd3fc', b)]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.7}
-                onLayout={() => requestAnimationFrame(measureTimeCenters)}
-              >
-                {sessionWindow.to}
-              </Text>
-            </View>
-          </View>
+          </PanelDebugOutline>
         </View>
-      </View>
-    </View>
+      </PanelDebugOutline>
+    </PanelDebugOutline>
   );
 }
