@@ -16,14 +16,14 @@ type Props = {
   panelLayoutBorders?: boolean;
 };
 
-const DATE_DAY = 64;
+const DATE_DAY = 60;
 /** Match font size — keeps the day row short without clipping the numeral. */
 const DATE_DAY_LH = 64;
 const DATE_MONTH = 48;
 /** Extra vertical room so Michroma “MMM” doesn’t clip / breach its outline. */
 const DATE_MONTH_LH = 58;
 /** Pull month up toward day; keep modest so overlap stays inside combined stack bounds. */
-const MONTH_PULL_UP = -10;
+const MONTH_PULL_UP = -0;
 
 const WEEKDAY_SIZE = 15;
 const WEEKDAY_LH = 19;
