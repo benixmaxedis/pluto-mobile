@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { View, Text, Platform, type LayoutChangeEvent, type TextStyle } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { colors, fontFamily, letterSpacing, spacing } from '@/lib/theme';
@@ -16,14 +16,12 @@ type Props = {
   panelLayoutBorders?: boolean;
 };
 
-const DATE_DAY = 60;
-/** Match font size — keeps the day row short without clipping the numeral. */
-const DATE_DAY_LH = 64;
-const DATE_MONTH = 48;
+const DATE_DAY = 70;
+/** Must be ≥ fontSize or RN clips the top/bottom of display numerals. */
+const DATE_DAY_LH = 72;
+const DATE_MONTH = 54;
 /** Extra vertical room so Michroma “MMM” doesn’t clip / breach its outline. */
 const DATE_MONTH_LH = 58;
-/** Pull month up toward day; keep modest so overlap stays inside combined stack bounds. */
-const MONTH_PULL_UP = -0;
 
 const WEEKDAY_SIZE = 15;
 const WEEKDAY_LH = 19;
@@ -32,12 +30,21 @@ const RAIL_W = 14;
 const NODE = 8;
 const LINE_W = 2;
 
+/** “to” label — secondary; weekday / “Events from” use `weekdayRowText`. */
 const eventMetaLabel = {
   fontFamily: fontFamily.generalSansMedium,
   fontSize: 13,
   lineHeight: 17,
   letterSpacing: letterSpacing.label,
   color: colors.text.secondary,
+} as const;
+
+/** Master row label: weekday + “Events from” (same size, alignment). */
+const weekdayRowTextBase = {
+  fontFamily: fontFamily.generalSansMedium,
+  fontSize: WEEKDAY_SIZE,
+  lineHeight: WEEKDAY_LH,
+  letterSpacing: letterSpacing.label,
 } as const;
 
 /** Android only — trims extra padding under display numerals */
@@ -52,16 +59,21 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
       ? Math.max(dayIntrinsicW, monthIntrinsicW)
       : undefined;
 
+  const dateTimesRowRef = useRef<View>(null);
+  const dayMeasureRef = useRef<View>(null);
+  const monthMeasureRef = useRef<View>(null);
   const rightColumnRef = useRef<View>(null);
-  const fromTimeWrapRef = useRef<View>(null);
-  const toTimeWrapRef = useRef<View>(null);
+  const fromTimeTextRef = useRef<Text | null>(null);
+  const toTimeTextRef = useRef<Text | null>(null);
   const [timeCentersY, setTimeCentersY] = useState<{ from: number; to: number } | null>(null);
+  /** Cumulative margins so re-measure after layout does not zero out correction (see syncTimeAlign). */
+  const [timeAlign, setTimeAlign] = useState({ fromMarginTop: 0, toSectionMarginTop: 0 });
 
   const measureTimeCenters = useCallback(() => {
     const host = rightColumnRef.current;
-    const fromW = fromTimeWrapRef.current;
-    const toW = toTimeWrapRef.current;
-    if (!host || !fromW || !toW) return;
+    const fromT = fromTimeTextRef.current;
+    const toT = toTimeTextRef.current;
+    if (!host || !fromT || !toT) return;
 
     let fromMid: number | null = null;
     let toMid: number | null = null;
@@ -69,14 +81,71 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
       if (fromMid != null && toMid != null) setTimeCentersY({ from: fromMid, to: toMid });
     };
 
-    fromW.measureLayout(host, (_x, y, _w, h) => { fromMid = y + h / 2; commit(); }, () => {});
-    toW.measureLayout(host, (_x, y, _w, h) => { toMid = y + h / 2; commit(); }, () => {});
+    fromT.measureLayout(host, (_x, y, _w, h) => { fromMid = y + h / 2; commit(); }, () => {});
+    toT.measureLayout(host, (_x, y, _w, h) => { toMid = y + h / 2; commit(); }, () => {});
   }, []);
+
+  const syncTimeAlign = useCallback(() => {
+    const row = dateTimesRowRef.current;
+    const dayEl = dayMeasureRef.current;
+    const monthEl = monthMeasureRef.current;
+    const fromEl = fromTimeTextRef.current;
+    const toEl = toTimeTextRef.current;
+    if (!row || !dayEl || !monthEl || !fromEl || !toEl) return;
+
+    dayEl.measureLayout(
+      row,
+      (_x, yDay) => {
+        monthEl.measureLayout(
+          row,
+          (_x, yM, _wM, hM) => {
+            const monthBottom = yM + hM;
+            fromEl.measureLayout(
+              row,
+              (_x, yFrom) => {
+                toEl.measureLayout(
+                  row,
+                  (_x, yTo, _wT, hT) => {
+                    const toBottom = yTo + hT;
+                    const fromDelta = Math.abs(yDay - yFrom) < 0.5 ? 0 : yDay - yFrom;
+                    const toDelta = Math.abs(monthBottom - toBottom) < 0.5 ? 0 : monthBottom - toBottom;
+                    setTimeAlign((prev) => {
+                      const fromMarginTop = Math.round(prev.fromMarginTop + fromDelta);
+                      const toSectionMarginTop = Math.round(prev.toSectionMarginTop + toDelta);
+                      if (
+                        fromMarginTop === prev.fromMarginTop &&
+                        toSectionMarginTop === prev.toSectionMarginTop
+                      ) {
+                        return prev;
+                      }
+                      return { fromMarginTop, toSectionMarginTop };
+                    });
+                  },
+                  () => {},
+                );
+              },
+              () => {},
+            );
+          },
+          () => {},
+        );
+      },
+      () => {},
+    );
+  }, []);
+
+  const onDateTimesRowLayout = useCallback(() => {
+    requestAnimationFrame(() => {
+      syncTimeAlign();
+      measureTimeCenters();
+    });
+  }, [syncTimeAlign, measureTimeCenters]);
 
   useEffect(() => {
     setDayIntrinsicW(0);
     setMonthIntrinsicW(0);
     setTimeCentersY(null);
+    setTimeAlign({ fromMarginTop: 0, toSectionMarginTop: 0 });
   }, [dateIso]);
 
   const sessionWindow =
@@ -85,10 +154,22 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
       : getSessionWindowLabels(sessionFilter);
 
   const sessionWindowKey = `${sessionFilter}:${sessionWindow.from}|${sessionWindow.to}`;
-  useEffect(() => { setTimeCentersY(null); }, [sessionWindowKey]);
+  useEffect(() => {
+    setTimeCentersY(null);
+    setTimeAlign({ fromMarginTop: 0, toSectionMarginTop: 0 });
+  }, [sessionWindowKey]);
+
+  useLayoutEffect(() => {
+    requestAnimationFrame(() => {
+      syncTimeAlign();
+      measureTimeCenters();
+    });
+  }, [timeAlign.fromMarginTop, timeAlign.toSectionMarginTop, dateBlockW, syncTimeAlign, measureTimeCenters]);
 
   const blue = colors.emphasis.primary;
   const b = panelLayoutBorders;
+
+  const weekdayRowText = { ...weekdayRowTextBase, color: blue } as const;
 
   const timeTextStyle = {
     fontFamily: fontFamily.michroma,
@@ -109,13 +190,56 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
       enabled={b}
       style={{ paddingHorizontal: spacing.lg }}
     >
-      {/* Two-column row */}
-      <PanelDebugOutline
-        color="#8b5cf6"
-        enabled={b}
-        style={{ flexDirection: 'row', alignItems: 'stretch', gap: spacing.xs }}
-      >
-        {/* Left: day + date stack — takes all remaining space */}
+      {/* Two-column row — inner View is measure host for day/month vs times */}
+      <PanelDebugOutline color="#8b5cf6" enabled={b} style={{ alignSelf: 'stretch' }}>
+        <View
+          ref={dateTimesRowRef}
+          collapsable={false}
+          onLayout={onDateTimesRowLayout}
+          style={{ flexDirection: 'column', alignSelf: 'stretch' }}
+        >
+          {/* Weekday + “Events from” share one row; weekday is typographic master */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.xs,
+            }}
+          >
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <PanelDebugOutline color="#fbbf24" enabled={b} style={{ alignSelf: 'flex-start' }}>
+                <Text style={weekdayRowText} numberOfLines={1}>
+                  {weekday}
+                </Text>
+              </PanelDebugOutline>
+            </View>
+            <View style={{ width: RAIL_W, marginRight: spacing.sm }} />
+            <View
+              style={{
+                flexGrow: 0,
+                flexShrink: 0,
+                flexBasis: '46%',
+                minWidth: 0,
+              }}
+            >
+              <PanelDebugOutline color="#fde047" enabled={b} style={{ alignSelf: 'flex-start' }}>
+                <Text style={weekdayRowText} numberOfLines={1}>
+                  Events from
+                </Text>
+              </PanelDebugOutline>
+            </View>
+          </View>
+
+          {/* Body: date block (left) + rail / session times (right) */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'stretch',
+              gap: spacing.xs,
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
         <PanelDebugOutline
           color="#ef4444"
           enabled={b}
@@ -125,81 +249,69 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
             justifyContent: 'flex-start',
           }}
         >
-          <PanelDebugOutline color="#fbbf24" enabled={b} style={{ alignSelf: 'flex-start' }}>
-            <Text
+            {/* Date block sits just under weekday row with a small gap */}
+            <PanelDebugOutline
+              color="#34d399"
+              enabled={b}
               style={{
-                fontFamily: fontFamily.generalSansMedium,
-                fontSize: WEEKDAY_SIZE,
-                lineHeight: WEEKDAY_LH,
-                letterSpacing: letterSpacing.label,
-                color: blue,
+                alignSelf: 'flex-start',
+                marginTop: spacing.sm,
+                width: dateBlockW,
+                alignItems: 'center',
+                overflow: 'visible',
               }}
-              numberOfLines={1}
             >
-              {weekday}
-            </Text>
-          </PanelDebugOutline>
-
-          {/* Date block — shared width; day/month rows shrink-wrap so outlines match glyph bounds */}
-          <PanelDebugOutline
-            color="#34d399"
-            enabled={b}
-            style={{
-              alignSelf: 'flex-start',
-              width: dateBlockW,
-              alignItems: 'center',
-              overflow: 'visible',
-            }}
-          >
-            <PanelDebugOutline color="#10b981" enabled={b} style={{ alignSelf: 'center', overflow: 'visible' }}>
-              <Text
-                onLayout={(e: LayoutChangeEvent) => {
-                  const w = e.nativeEvent.layout.width;
-                  if (w > 0) setDayIntrinsicW((prev) => (prev === w ? prev : w));
-                }}
-                style={[
-                  {
-                    fontFamily: fontFamily.michroma,
-                    fontSize: DATE_DAY,
-                    lineHeight: DATE_DAY_LH,
-                    letterSpacing: letterSpacing.displayTight,
-                    color: blue,
-                    textAlign: 'center',
-                  },
-                  androidTightNumerals,
-                ]}
-                numberOfLines={1}
-              >
-                {dayNum}
-              </Text>
+              <View ref={dayMeasureRef} collapsable={false} style={{ alignSelf: 'center' }}>
+                <PanelDebugOutline color="#10b981" enabled={b} style={{ alignSelf: 'center', overflow: 'visible' }}>
+                  <Text
+                    onLayout={(e: LayoutChangeEvent) => {
+                      const w = e.nativeEvent.layout.width;
+                      if (w > 0) setDayIntrinsicW((prev) => (prev === w ? prev : w));
+                    }}
+                    style={[
+                      {
+                        fontFamily: fontFamily.michroma,
+                        fontSize: DATE_DAY,
+                        lineHeight: DATE_DAY_LH,
+                        letterSpacing: letterSpacing.displayTight,
+                        color: blue,
+                        textAlign: 'center',
+                      },
+                      androidTightNumerals,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {dayNum}
+                  </Text>
+                </PanelDebugOutline>
+              </View>
+              <View ref={monthMeasureRef} collapsable={false} style={{ alignSelf: 'center' }}>
+                <PanelDebugOutline color="#059669" enabled={b} style={{ alignSelf: 'center', overflow: 'visible' }}>
+                  <Text
+                    onLayout={(e: LayoutChangeEvent) => {
+                      const w = e.nativeEvent.layout.width;
+                      if (w > 0) setMonthIntrinsicW((prev) => (prev === w ? prev : w));
+                    }}
+                    style={[
+                      {
+                        fontFamily: fontFamily.michroma,
+                        fontSize: DATE_MONTH,
+                        lineHeight: DATE_MONTH_LH,
+                        letterSpacing: letterSpacing.displayTight,
+                        color: blue,
+                        textAlign: 'center',
+                      },
+                      androidTightNumerals,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {month}
+                  </Text>
+                </PanelDebugOutline>
+              </View>
             </PanelDebugOutline>
-            <PanelDebugOutline color="#059669" enabled={b} style={{ alignSelf: 'center', overflow: 'visible' }}>
-              <Text
-                onLayout={(e: LayoutChangeEvent) => {
-                  const w = e.nativeEvent.layout.width;
-                  if (w > 0) setMonthIntrinsicW((prev) => (prev === w ? prev : w));
-                }}
-                style={[
-                  {
-                    fontFamily: fontFamily.michroma,
-                    fontSize: DATE_MONTH,
-                    lineHeight: DATE_MONTH_LH,
-                    letterSpacing: letterSpacing.displayTight,
-                    color: blue,
-                    marginTop: MONTH_PULL_UP,
-                    textAlign: 'center',
-                  },
-                  androidTightNumerals,
-                ]}
-                numberOfLines={1}
-              >
-                {month}
-              </Text>
-            </PanelDebugOutline>
-          </PanelDebugOutline>
         </PanelDebugOutline>
 
-        {/* Right: rail + times — fixed basis so it never competes with left */}
         <View
           ref={rightColumnRef}
           style={{
@@ -208,8 +320,9 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
             flexBasis: '46%',
             flexDirection: 'row',
             alignItems: 'stretch',
+            minWidth: 0,
           }}
-          onLayout={() => requestAnimationFrame(measureTimeCenters)}
+          onLayout={onDateTimesRowLayout}
         >
           {/* Vertical rail — stretches to match times column / row height */}
           <View
@@ -275,43 +388,53 @@ export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders 
             style={{
               flex: 1,
               minWidth: 0,
-              /** Center the events stack vertically in the column (avoid flex:1 bands — RN can give them 0 height and adjustsFontSizeToFit shrinks time to invisible). */
-              justifyContent: 'center',
+              minHeight: 0,
+              justifyContent: 'flex-start',
             }}
           >
-            <PanelDebugOutline color="#fde047" enabled={b}>
-              <Text style={eventMetaLabel}>Events from</Text>
-            </PanelDebugOutline>
-            <View ref={fromTimeWrapRef} collapsable={false}>
+            <View collapsable={false} style={{ marginTop: timeAlign.fromMarginTop }}>
               <PanelDebugOutline color="#2dd4bf" enabled={b}>
                 <Text
+                  ref={fromTimeTextRef}
                   style={[timeTextStyle, androidTightNumerals]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.7}
-                  onLayout={() => requestAnimationFrame(measureTimeCenters)}
+                  onLayout={onDateTimesRowLayout}
                 >
                   {sessionWindow.from}
                 </Text>
               </PanelDebugOutline>
             </View>
-            <PanelDebugOutline color="#c084fc" enabled={b} style={{ alignItems: 'flex-start' }}>
-              <Text style={eventMetaLabel}>to</Text>
-            </PanelDebugOutline>
-            <View ref={toTimeWrapRef} collapsable={false}>
+            <View
+              style={{
+                flex: 1,
+                minHeight: 0,
+                justifyContent: 'center',
+                alignItems: 'flex-start',
+              }}
+            >
+              <PanelDebugOutline color="#c084fc" enabled={b} style={{ alignItems: 'flex-start' }}>
+                <Text style={eventMetaLabel}>to</Text>
+              </PanelDebugOutline>
+            </View>
+            <View collapsable={false} style={{ marginTop: timeAlign.toSectionMarginTop }}>
               <PanelDebugOutline color="#38bdf8" enabled={b}>
                 <Text
+                  ref={toTimeTextRef}
                   style={[timeTextStyle, androidTightNumerals]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.7}
-                  onLayout={() => requestAnimationFrame(measureTimeCenters)}
+                  onLayout={onDateTimesRowLayout}
                 >
                   {sessionWindow.to}
                 </Text>
               </PanelDebugOutline>
             </View>
           </PanelDebugOutline>
+        </View>
+          </View>
         </View>
       </PanelDebugOutline>
     </PanelDebugOutline>
