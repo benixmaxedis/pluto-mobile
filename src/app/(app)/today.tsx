@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui';
 import { NowGreeting } from '@/components/now/NowGreeting';
 import { NowWeekStrip } from '@/components/now/NowWeekStrip';
 import { NowDateEventsPanel } from '@/components/now/NowDateEventsPanel';
+import { NowDateSessionPanel } from '@/components/now/NowDateSessionPanel';
 import { NowSessionChips } from '@/components/now/NowSessionChips';
 import { NowTimeline } from '@/components/now/NowTimeline';
 import { SessionHistoryRow } from '@/components/cards/SessionHistoryRow';
@@ -255,6 +256,10 @@ export default function TodayScreen() {
             dateIso={selectedDate}
             sessionFilter={sessionFilter}
             panelLayoutBorders={panelLayoutBorders}
+          />
+          <NowDateSessionPanel
+            dateIso={selectedDate}
+            sessionFilter={sessionFilter}
           />
         </View>
 

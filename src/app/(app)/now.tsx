@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui';
 import { NowGreeting } from '@/components/now/NowGreeting';
 import { NowWeekStrip } from '@/components/now/NowWeekStrip';
 import { NowDateEventsPanel } from '@/components/now/NowDateEventsPanel';
+import { NowDateSessionPanel } from '@/components/now/NowDateSessionPanel';
 import { NowSessionChips } from '@/components/now/NowSessionChips';
 import { DATE_PANEL_LAYOUT_DEBUG_UI, dbgBorder } from '@/components/now/debug-layout-borders';
 import { useDatePanelLayoutDebug } from '@/components/now/date-panel-layout-debug-context';
@@ -261,6 +262,10 @@ export default function NowScreen() {
             dateIso={selectedDate}
             sessionFilter={sessionFilter}
             panelLayoutBorders={panelLayoutBorders}
+          />
+          <NowDateSessionPanel
+            dateIso={selectedDate}
+            sessionFilter={sessionFilter}
           />
         </View>
 
