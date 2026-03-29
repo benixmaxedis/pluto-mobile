@@ -12,13 +12,14 @@ import { NowTimeline } from '@/components/now/NowTimeline';
 import { SessionHistoryRow } from '@/components/cards/SessionHistoryRow';
 import { JournalFormSheet } from '@/components/sheets';
 import { type FormSheetRef } from '@/components/sheets/FormSheet';
+import { TaskActionSheet, type TaskActionSheetRef } from '@/components/sheets/TaskActionSheet';
 import { useSessionEngine } from '@/features/queue/hooks/useSessionEngine';
 import { isNowSessionPast } from '@/features/queue/engine/session-resolver';
 import { isJournalQueueItem } from '@/features/queue/journal-queue';
 import { useJournalEntriesByDate } from '@/features/capture/hooks/useJournal';
 import { useAppStore } from '@/store/app-store';
-import { useCompleteAction, useSkipAction, useSnoozeAction, useMoveAction } from '@/features/actions/hooks/useActionMutations';
-import { useCompleteInstance, useSkipInstance, useSnoozeInstance, useMoveInstance } from '@/features/routines/hooks/useRoutineMutations';
+import { useCompleteAction, useSkipAction, useMoveAction } from '@/features/actions/hooks/useActionMutations';
+import { useCompleteInstance, useSkipInstance, useMoveInstance } from '@/features/routines/hooks/useRoutineMutations';
 import { toISODate, todayISO } from '@/lib/utils/date';
 import { SESSION_ORDER } from '@/lib/constants/sessions';
 import { Session } from '@/lib/constants';
@@ -30,8 +31,7 @@ import {
 } from '@/features/now/use-now-queues';
 import { useMergedNowHistory } from '@/features/now/use-merged-session-history';
 import { useSyncCreateDrawerPreference } from '@/features/now/use-sync-create-drawer-preference';
-import { DATE_PANEL_LAYOUT_DEBUG_UI } from '@/components/now/debug-layout-borders';
-
+import type { QueueItem } from '@/features/queue/engine/queue-builder';
 
 const FLOATING_TAB_BAR_CLEARANCE = 12 + 64;
 
@@ -60,14 +60,12 @@ export default function TodayScreen() {
   useSessionEngine();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  /** Greeting + week + date/events + session row — target ≤35% of viewport */
   const headerMaxHeight = Math.round(windowHeight * 0.35);
 
   const { selectedDate, setSelectedDate, currentSession, setCurrentSession } = useAppStore();
   const today = todayISO();
 
   const [sessionFilter, setSessionFilter] = useState<NowSessionFilter>(currentSession);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (sessionFilter !== 'all') {
@@ -99,29 +97,7 @@ export default function TodayScreen() {
     [sessionFilter, morning, afternoon, evening, allSessions],
   );
 
-  const queueKey = useMemo(() => displayQueue.map((i) => i.id).join('|'), [displayQueue]);
-
-  const createDrawerPreferred = useMemo(() => {
-    if (!expandedId) return null;
-    const item = displayQueue.find((i) => i.id === expandedId);
-    if (!item || isJournalQueueItem(item)) return null;
-    if (item.type === 'action') return 'action' as const;
-    if (item.type === 'routine_instance') return 'routine' as const;
-    return null;
-  }, [expandedId, queueKey, displayQueue]);
-
-  useSyncCreateDrawerPreference(createDrawerPreferred);
-
-  useEffect(() => {
-    if (displayQueue.length === 0) {
-      setExpandedId(null);
-      return;
-    }
-    setExpandedId((prev) => {
-      if (prev && displayQueue.some((i) => i.id === prev)) return prev;
-      return displayQueue[0].id;
-    });
-  }, [queueKey, displayQueue]);
+  useSyncCreateDrawerPreference(null);
 
   const { skipped: skippedHistory, completed: completedHistory, isFetched: historyFetched } =
     useMergedNowHistory(selectedDate, sessionFilter);
@@ -132,6 +108,7 @@ export default function TodayScreen() {
 
   const journalSheetRef = useRef<FormSheetRef>(null);
   const [journalSheetType, setJournalSheetType] = useState<'morning' | 'evening'>('morning');
+  const taskSheetRef = useRef<TaskActionSheetRef>(null);
 
   const openJournal = useCallback((type: 'morning' | 'evening') => {
     setJournalSheetType(type);
@@ -140,31 +117,26 @@ export default function TodayScreen() {
 
   const completeAction = useCompleteAction();
   const skipAction = useSkipAction();
-  const snoozeAction = useSnoozeAction();
   const moveAction = useMoveAction();
   const completeInstance = useCompleteInstance();
   const skipInstance = useSkipInstance();
-  const snoozeInstance = useSnoozeInstance();
   const moveInstance = useMoveInstance();
 
-  const findItem = useCallback(
-    (id: string) => displayQueue.find((i) => i.id === id) ?? null,
-    [displayQueue],
+  const handleItemPress = useCallback(
+    (item: QueueItem) => {
+      if (sessionEnded) return;
+      taskSheetRef.current?.present(item);
+    },
+    [sessionEnded],
   );
 
   const handleComplete = useCallback(
     (id: string) => {
-      const item = findItem(id);
+      const item = displayQueue.find((i) => i.id === id);
       if (!item || sessionEnded) return;
 
-      if (item.type === 'journal_morning') {
-        openJournal('morning');
-        return;
-      }
-      if (item.type === 'journal_evening') {
-        openJournal('evening');
-        return;
-      }
+      if (item.type === 'journal_morning') { openJournal('morning'); return; }
+      if (item.type === 'journal_evening') { openJournal('evening'); return; }
 
       if (item.type === 'action') {
         completeAction.mutate(id);
@@ -172,12 +144,12 @@ export default function TodayScreen() {
         completeInstance.mutate(id);
       }
     },
-    [findItem, sessionEnded, completeAction, completeInstance, openJournal],
+    [displayQueue, sessionEnded, completeAction, completeInstance, openJournal],
   );
 
   const handleSkip = useCallback(
     (id: string) => {
-      const item = findItem(id);
+      const item = displayQueue.find((i) => i.id === id);
       if (!item || sessionEnded || isJournalQueueItem(item)) return;
 
       if (item.type === 'action') {
@@ -186,37 +158,12 @@ export default function TodayScreen() {
         skipInstance.mutate(id);
       }
     },
-    [findItem, sessionEnded, skipAction, skipInstance],
-  );
-
-  const handleSnooze = useCallback(
-    (id: string) => {
-      const item = findItem(id);
-      if (!item || sessionEnded || isJournalQueueItem(item)) return;
-
-      const sess = item.session ?? Session.MORNING;
-      const nextSessionIndex = SESSION_ORDER.indexOf(sess) + 1;
-      const nextSession =
-        nextSessionIndex < SESSION_ORDER.length
-          ? SESSION_ORDER[nextSessionIndex]
-          : Session.MORNING;
-      const snoozeDate =
-        nextSessionIndex < SESSION_ORDER.length
-          ? selectedDate
-          : toISODate(addDays(new Date(selectedDate + 'T00:00:00'), 1));
-
-      if (item.type === 'action') {
-        snoozeAction.mutate({ id, untilDate: snoozeDate, untilSession: nextSession });
-      } else {
-        snoozeInstance.mutate({ id, untilSession: nextSession });
-      }
-    },
-    [findItem, sessionEnded, selectedDate, snoozeAction, snoozeInstance],
+    [displayQueue, sessionEnded, skipAction, skipInstance],
   );
 
   const handleMove = useCallback(
     (id: string) => {
-      const item = findItem(id);
+      const item = displayQueue.find((i) => i.id === id);
       if (!item || sessionEnded || isJournalQueueItem(item)) return;
 
       const sess = item.session ?? Session.MORNING;
@@ -236,18 +183,13 @@ export default function TodayScreen() {
         moveInstance.mutate({ id, toSession: nextSession });
       }
     },
-    [findItem, sessionEnded, selectedDate, moveAction, moveInstance],
+    [displayQueue, sessionEnded, selectedDate, moveAction, moveInstance],
   );
-
-  const handleToggleExpand = useCallback((id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id));
-  }, []);
 
   const scrollBottomPad =
     insets.bottom +
     FLOATING_TAB_BAR_CLEARANCE +
-    spacing.xl +
-    (DATE_PANEL_LAYOUT_DEBUG_UI ? 52 : 0);
+    spacing.xl;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -278,12 +220,8 @@ export default function TodayScreen() {
         ) : (
           <NowTimeline
             items={displayQueue}
-            expandedId={sessionEnded ? null : expandedId}
-            onToggleExpand={handleToggleExpand}
-            onComplete={handleComplete}
-            onSkip={handleSkip}
-            onSnooze={handleSnooze}
-            onMove={handleMove}
+            currentSession={currentSession}
+            onPress={handleItemPress}
             readOnly={sessionEnded}
           />
         )}
@@ -323,6 +261,14 @@ export default function TodayScreen() {
           </View>
         )}
       </ScrollView>
+
+      <TaskActionSheet
+        ref={taskSheetRef}
+        onComplete={handleComplete}
+        onSkip={handleSkip}
+        onMove={handleMove}
+        readOnly={sessionEnded}
+      />
 
       <JournalFormSheet
         ref={journalSheetRef}

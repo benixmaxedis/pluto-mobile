@@ -7,9 +7,6 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { colors, letterSpacing, spacing, fontSize, borderRadius, fontFamily } from '@/lib/theme';
-import { dbgBorder } from '@/components/now/debug-layout-borders';
-
-const DAY_DEBUG_COLORS = ['#f43f5e', '#f97316', '#eab308', '#84cc16', '#14b8a6', '#6366f1', '#d946ef'];
 import { toISODate } from '@/lib/utils/date';
 
 type Props = {
@@ -26,49 +23,37 @@ export function NowWeekStrip({ selectedDate, onSelectDate }: Props) {
 
   return (
     <View
-      style={[
-        { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, marginBottom: spacing.xs },
-        dbgBorder('#f97316'),
-      ]}
+      style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, marginBottom: spacing.xs }}
     >
       <View
-        style={[
-          { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.hairline },
-          dbgBorder('#eab308'),
-        ]}
+        style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.hairline }}
       >
-        {days.map((d, i) => {
+        {days.map((d) => {
           const iso = toISODate(d);
           const selected = isSameDay(d, anchor);
           return (
             <Pressable
               key={iso}
               onPress={() => onSelectDate(iso)}
-              style={({ pressed }) => [
-                {
-                  flex: 1,
-                  alignItems: 'center',
-                  opacity: pressed ? 0.82 : 1,
-                },
-                dbgBorder(DAY_DEBUG_COLORS[i % DAY_DEBUG_COLORS.length]),
-              ]}
+              style={({ pressed }) => ({
+                flex: 1,
+                alignItems: 'center',
+                opacity: pressed ? 0.82 : 1,
+              })}
             >
               <View
-                style={[
-                  {
-                    width: '100%',
-                    maxWidth: 48,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: 6,
-                    paddingHorizontal: spacing.hairline,
-                    borderRadius: borderRadius.full,
-                    backgroundColor: selected ? blue : 'transparent',
-                    borderWidth: 1,
-                    borderColor: selected ? blue : colors.border,
-                  },
-                  dbgBorder('#0ea5e9'),
-                ]}
+                style={{
+                  width: '100%',
+                  maxWidth: 48,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: 6,
+                  paddingHorizontal: spacing.hairline,
+                  borderRadius: borderRadius.full,
+                  backgroundColor: selected ? blue : 'transparent',
+                  borderWidth: 1,
+                  borderColor: selected ? blue : colors.border,
+                }}
               >
                 <Text
                   style={{

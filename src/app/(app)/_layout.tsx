@@ -1,14 +1,13 @@
 import { useState } from 'react';
+import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { FloatingTabBar } from '@/components/ui/FloatingTabBar';
 import { CreateDrawer } from '@/components/ui/CreateDrawer';
-import { DatePanelLayoutDebugProvider } from '@/components/now/date-panel-layout-debug-context';
-
 export default function AppLayout() {
   const [drawerVisible, setDrawerVisible] = useState(false);
 
   return (
-    <DatePanelLayoutDebugProvider>
+    <View style={{ flex: 1 }}>
       <Tabs
         tabBar={(props) => (
           <FloatingTabBar {...props} onPlusPress={() => setDrawerVisible(true)} />
@@ -31,6 +30,6 @@ export default function AppLayout() {
       </Tabs>
 
       <CreateDrawer visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
-    </DatePanelLayoutDebugProvider>
+    </View>
   );
 }

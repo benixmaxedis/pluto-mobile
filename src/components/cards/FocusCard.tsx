@@ -9,7 +9,6 @@ interface FocusCardProps {
   subtaskProgress?: { completed: number; total: number } | null;
   onComplete: (id: string) => void;
   onSkip: (id: string) => void;
-  onSnooze: (id: string) => void;
   onMove: (id: string) => void;
 }
 
@@ -18,7 +17,6 @@ export function FocusCard({
   subtaskProgress,
   onComplete,
   onSkip,
-  onSnooze,
   onMove,
 }: FocusCardProps) {
   const isJournal = isJournalQueueItem(item);
@@ -91,13 +89,6 @@ export function FocusCard({
                 size="sm"
                 accentColor={colors.text.secondary}
                 onPress={() => onSkip(item.id)}
-              />
-              <Button
-                title="Snooze"
-                variant="ghost"
-                size="sm"
-                accentColor={colors.text.secondary}
-                onPress={() => onSnooze(item.id)}
               />
               <Button
                 title="Move"
