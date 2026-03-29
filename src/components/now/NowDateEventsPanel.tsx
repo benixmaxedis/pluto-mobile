@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, Switch, type LayoutChangeEvent } from 'react-native';
+import { View, Text, type LayoutChangeEvent } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { colors, fontFamily, letterSpacing, spacing } from '@/lib/theme';
 import {
@@ -7,15 +7,13 @@ import {
   getSessionWindowLabels,
 } from '@/features/now/session-time-format';
 import type { NowSessionFilter } from '@/features/now/use-now-queues';
-import {
-  DEBUG_DATE_PANEL_BORDERS,
-  dbgPanelBorder,
-  dbgPanelTextBorder,
-} from '@/components/now/debug-layout-borders';
+import { dbgPanelBorder, dbgPanelTextBorder } from '@/components/now/debug-layout-borders';
 
 type Props = {
   dateIso: string;
   sessionFilter: NowSessionFilter;
+  /** Controlled from Now screen (floating toggle). Default off elsewhere. */
+  panelLayoutBorders?: boolean;
 };
 
 const DATE_DAY = 70;
@@ -41,9 +39,7 @@ const eventMetaLabel = {
   color: colors.text.secondary,
 } as const;
 
-export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
-  const [showBorders, setShowBorders] = useState(DEBUG_DATE_PANEL_BORDERS);
-
+export function NowDateEventsPanel({ dateIso, sessionFilter, panelLayoutBorders = false }: Props) {
   const [dayIntrinsicW, setDayIntrinsicW] = useState(0);
   const [monthIntrinsicW, setMonthIntrinsicW] = useState(0);
   const dateBlockW =
@@ -87,7 +83,7 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
   useEffect(() => { setTimeCentersY(null); }, [sessionWindowKey]);
 
   const blue = colors.emphasis.primary;
-  const b = showBorders;
+  const b = panelLayoutBorders;
 
   const timeTextStyle = {
     fontFamily: fontFamily.michroma,
@@ -109,28 +105,6 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
         dbgPanelBorder('#ec4899', b),
       ]}
     >
-      {/* Debug toggle */}
-      {DEBUG_DATE_PANEL_BORDERS && (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: spacing.xs,
-            marginBottom: 4,
-          }}
-        >
-          <Text style={{ fontSize: 11, color: colors.text.muted }}>borders</Text>
-          <Switch
-            value={showBorders}
-            onValueChange={setShowBorders}
-            trackColor={{ false: colors.border, true: colors.emphasis.primary + '66' }}
-            thumbColor={showBorders ? colors.emphasis.primary : colors.text.muted}
-            style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }] }}
-          />
-        </View>
-      )}
-
       {/* Two-column row */}
       <View
         style={[

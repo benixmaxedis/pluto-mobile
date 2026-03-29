@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, Switch, useWindowDimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, textStyles } from '@/lib/theme';
 import { EmptyState } from '@/components/ui';
@@ -8,7 +8,11 @@ import { NowGreeting } from '@/components/now/NowGreeting';
 import { NowWeekStrip } from '@/components/now/NowWeekStrip';
 import { NowDateEventsPanel } from '@/components/now/NowDateEventsPanel';
 import { NowSessionChips } from '@/components/now/NowSessionChips';
-import { dbgBorder } from '@/components/now/debug-layout-borders';
+import {
+  DATE_PANEL_LAYOUT_DEBUG_UI,
+  DEBUG_DATE_PANEL_BORDERS_INITIAL,
+  dbgBorder,
+} from '@/components/now/debug-layout-borders';
 import { NowTimeline } from '@/components/now/NowTimeline';
 import { SessionHistoryRow } from '@/components/cards/SessionHistoryRow';
 import { JournalFormSheet } from '@/components/sheets';
@@ -52,8 +56,12 @@ function sessionEndedForFilter(date: string, filter: NowSessionFilter): boolean 
   return isNowSessionPast(date, filter);
 }
 
+/** Space for FloatingTabBar: `bottom` offset 12 + max(pill, plus) ~64px */
+const FLOATING_TAB_BAR_CLEARANCE = 12 + 64;
+
 export default function NowScreen() {
   useSessionEngine();
+  const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   /** Greeting + week + date/events + session row — target ≤35% of viewport */
   const headerMaxHeight = Math.round(windowHeight * 0.35);
@@ -63,6 +71,7 @@ export default function NowScreen() {
 
   const [sessionFilter, setSessionFilter] = useState<NowSessionFilter>(currentSession);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [panelLayoutBorders, setPanelLayoutBorders] = useState(DEBUG_DATE_PANEL_BORDERS_INITIAL);
 
   useEffect(() => {
     if (sessionFilter !== 'all') {
@@ -227,13 +236,23 @@ export default function NowScreen() {
     setExpandedId((prev) => (prev === id ? null : id));
   }, []);
 
+  const scrollBottomPad =
+    insets.bottom +
+    FLOATING_TAB_BAR_CLEARANCE +
+    spacing.xl +
+    (DATE_PANEL_LAYOUT_DEBUG_UI ? 52 : 0);
+
+  const debugBarBottom = insets.bottom + FLOATING_TAB_BAR_CLEARANCE + 6;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: spacing['3xl'] }}
+        contentContainerStyle={{
+          paddingBottom: Math.max(spacing['3xl'], scrollBottomPad),
+        }}
       >
         <View
           style={[
@@ -243,7 +262,11 @@ export default function NowScreen() {
         >
           <NowGreeting />
           <NowWeekStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
-          <NowDateEventsPanel dateIso={selectedDate} sessionFilter={sessionFilter} />
+          <NowDateEventsPanel
+            dateIso={selectedDate}
+            sessionFilter={sessionFilter}
+            panelLayoutBorders={panelLayoutBorders}
+          />
         </View>
 
         <NowSessionChips value={sessionFilter} onChange={setSessionFilter} />
@@ -300,6 +323,48 @@ export default function NowScreen() {
           </View>
         )}
       </ScrollView>
+
+      {DATE_PANEL_LAYOUT_DEBUG_UI && (
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: debugBarBottom,
+            zIndex: 50,
+            alignItems: 'center',
+          }}
+        >
+          <View
+            pointerEvents="auto"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: spacing.sm,
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.md,
+              marginHorizontal: spacing.lg,
+              maxWidth: 360,
+              width: '100%',
+              backgroundColor: colors.surfaceRaised,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: colors.borderSubtle,
+            }}
+          >
+            <Text style={{ fontSize: 13, color: colors.text.secondary }}>Date panel borders</Text>
+            <Switch
+              accessibilityLabel="Toggle date panel layout borders"
+              value={panelLayoutBorders}
+              onValueChange={setPanelLayoutBorders}
+              trackColor={{ false: colors.border, true: colors.emphasis.primary + '88' }}
+              thumbColor={panelLayoutBorders ? colors.emphasis.primary : colors.text.muted}
+            />
+          </View>
+        </View>
+      )}
 
       <JournalFormSheet
         ref={journalSheetRef}
