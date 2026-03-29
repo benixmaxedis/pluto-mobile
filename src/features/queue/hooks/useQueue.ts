@@ -38,6 +38,7 @@ async function fetchQueue(date: string, session: Session): Promise<QueueItem[]> 
     carryForwardCount: 0,
     sortOrder: ri.sortOrder ?? 0,
     createdAt: ri.createdAt,
+    templateId: ri.routineTemplateId,
   }));
 
   return buildQueue(date, session, actionItems, instanceItems);

@@ -10,7 +10,7 @@ import { NowDateSessionPanel } from '@/components/now/NowDateSessionPanel';
 import { NowSessionChips } from '@/components/now/NowSessionChips';
 import { NowTimeline } from '@/components/now/NowTimeline';
 import { SessionHistoryRow } from '@/components/cards/SessionHistoryRow';
-import { JournalFormSheet } from '@/components/sheets';
+import { JournalFormSheet, ActionFormSheet, RoutineFormSheet } from '@/components/sheets';
 import { type FormSheetRef } from '@/components/sheets/FormSheet';
 import { TaskActionSheet, type TaskActionSheetRef } from '@/components/sheets/TaskActionSheet';
 import { useSessionEngine } from '@/features/queue/hooks/useSessionEngine';
@@ -20,6 +20,8 @@ import { useJournalEntriesByDate } from '@/features/capture/hooks/useJournal';
 import { useAppStore } from '@/store/app-store';
 import { useCompleteAction, useSkipAction, useMoveAction } from '@/features/actions/hooks/useActionMutations';
 import { useCompleteInstance, useSkipInstance, useMoveInstance } from '@/features/routines/hooks/useRoutineMutations';
+import { useActionById } from '@/features/actions/hooks/useActions';
+import { useRoutineTemplateById } from '@/features/routines/hooks/useRoutines';
 import { toISODate, todayISO } from '@/lib/utils/date';
 import { SESSION_ORDER } from '@/lib/constants/sessions';
 import { Session } from '@/lib/constants';
@@ -112,6 +114,27 @@ export default function TodayScreen() {
   const journalSheetRef = useRef<FormSheetRef>(null);
   const [journalSheetType, setJournalSheetType] = useState<'morning' | 'evening'>('morning');
   const taskSheetRef = useRef<TaskActionSheetRef>(null);
+
+  // Edit flow
+  const [editItem, setEditItem] = useState<QueueItem | null>(null);
+  const actionEditRef = useRef<FormSheetRef>(null);
+  const [routineEditOpen, setRoutineEditOpen] = useState(false);
+  const { data: editActionData } = useActionById(
+    editItem?.type === 'action' ? editItem.id : null,
+  );
+  const { data: editTemplateData } = useRoutineTemplateById(
+    editItem?.type === 'routine_instance' ? (editItem.templateId ?? null) : null,
+  );
+
+  useEffect(() => {
+    if (!editItem) return;
+    if (editItem.type === 'action' && editActionData) {
+      actionEditRef.current?.present();
+    }
+    if (editItem.type === 'routine_instance' && editTemplateData) {
+      setRoutineEditOpen(true);
+    }
+  }, [editItem, editActionData, editTemplateData]);
 
   const openJournal = useCallback((type: 'morning' | 'evening') => {
     setJournalSheetType(type);
@@ -271,7 +294,44 @@ export default function TodayScreen() {
         onComplete={handleComplete}
         onSkip={handleSkip}
         onMove={handleMove}
+        onEdit={setEditItem}
         readOnly={sessionEnded}
+      />
+
+      <ActionFormSheet
+        ref={actionEditRef}
+        editId={editItem?.type === 'action' ? editItem.id : null}
+        editData={
+          editActionData
+            ? {
+                title: editActionData.title,
+                notes: editActionData.notes ?? undefined,
+                scheduledDate: editActionData.scheduledDate ?? undefined,
+                scheduledSession: editActionData.scheduledSession as Session | undefined,
+                priority: (editActionData.priority ?? 'normal') as 'normal' | 'high',
+                isHeld: editActionData.isHeld ?? false,
+              }
+            : null
+        }
+        onDismiss={() => setEditItem(null)}
+      />
+
+      <RoutineFormSheet
+        visible={routineEditOpen}
+        onDismiss={() => { setRoutineEditOpen(false); setEditItem(null); }}
+        editId={editTemplateData?.id}
+        editData={
+          editTemplateData
+            ? {
+                title: editTemplateData.title,
+                notes: editTemplateData.notes ?? undefined,
+                category: editTemplateData.category as any,
+                defaultSession: editTemplateData.defaultSession as Session | undefined,
+                recurrenceType: editTemplateData.recurrenceType as any,
+                recurrenceDaysJson: editTemplateData.recurrenceDaysJson ?? undefined,
+              }
+            : null
+        }
       />
 
       {/* Debug border toggle — fixed above tab bar, only shown when debug flag is on */}

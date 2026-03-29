@@ -14,6 +14,8 @@ export interface QueueItem {
   sortOrder: number;
   createdAt: string;
   actionKind?: 'normal' | 'chain_generated';
+  /** For routine_instance items: the parent template ID (needed to open the edit form) */
+  templateId?: string;
 }
 
 /**

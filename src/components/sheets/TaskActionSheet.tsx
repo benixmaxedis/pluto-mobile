@@ -14,6 +14,7 @@ interface Props {
   onComplete: (id: string) => void;
   onSkip: (id: string) => void;
   onMove: (id: string) => void;
+  onEdit?: (item: QueueItem) => void;
   readOnly?: boolean;
 }
 
@@ -32,7 +33,7 @@ function getKindLabel(item: QueueItem): string {
 type ActionDef = { key: string; label: string; color: string; onPress: () => void };
 
 export const TaskActionSheet = forwardRef<TaskActionSheetRef, Props>(
-  ({ onComplete, onSkip, onMove, readOnly }, ref) => {
+  ({ onComplete, onSkip, onMove, onEdit, readOnly }, ref) => {
     const [visible, setVisible] = useState(false);
     const [item, setItem] = useState<QueueItem | null>(null);
     const insets = useSafeAreaInsets();
@@ -62,6 +63,12 @@ export const TaskActionSheet = forwardRef<TaskActionSheetRef, Props>(
         onPress: () => { close(); onComplete(item.id); },
       });
       if (!isJournal) {
+        actions.push({
+          key: 'edit',
+          label: 'Edit details',
+          color: colors.text.secondary,
+          onPress: () => { close(); onEdit?.(item); },
+        });
         actions.push({
           key: 'skip',
           label: 'Skip',

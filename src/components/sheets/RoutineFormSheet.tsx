@@ -181,7 +181,7 @@ export function RoutineFormSheet({ visible, onDismiss, editId, editData }: Routi
       {(recurrenceType === 'weekly' || recurrenceType === 'fortnightly') && (
         <View style={{ gap: spacing.xs }}>
           <Text style={{ fontSize: fontSize.sm, color: colors.text.secondary, fontWeight: '500' }}>Days</Text>
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
             {DAYS.map((day, i) => (
               <Chip
                 key={day}
