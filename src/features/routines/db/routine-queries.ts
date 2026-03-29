@@ -36,7 +36,7 @@ export async function getActiveTemplates() {
   return camelRows((data ?? []) as Record<string, unknown>[]);
 }
 
-export async function getTemplateById(id: string) {
+export async function getTemplateById(id: string): Promise<RoutineTemplate | null> {
   const userId = await uid();
   const { data, error } = await getSupabase()
     .from('routine_templates')
@@ -45,7 +45,7 @@ export async function getTemplateById(id: string) {
     .eq('user_id', userId)
     .maybeSingle();
   if (error) throw error;
-  return data ? camelRow(data as Record<string, unknown>) : null;
+  return data ? (camelRow(data as Record<string, unknown>) as unknown as RoutineTemplate) : null;
 }
 
 export async function getTemplatesByCategory(category: string) {

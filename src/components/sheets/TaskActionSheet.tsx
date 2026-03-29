@@ -55,33 +55,44 @@ export const TaskActionSheet = forwardRef<TaskActionSheetRef, Props>(
     const isJournal = isJournalQueueItem(item);
 
     const actions: ActionDef[] = [];
-    if (!readOnly) {
+
+    // Complete is always available — users can retroactively mark past-session items done
+    if (!isJournal) {
       actions.push({
         key: 'complete',
-        label: isJournal ? 'Open journal' : 'Complete',
+        label: 'Complete',
         color: accent,
         onPress: () => { close(); onComplete(item.id); },
       });
-      if (!isJournal) {
-        actions.push({
-          key: 'edit',
-          label: 'Edit details',
-          color: colors.text.secondary,
-          onPress: () => { close(); onEdit?.(item); },
-        });
-        actions.push({
-          key: 'skip',
-          label: 'Skip',
-          color: colors.text.secondary,
-          onPress: () => { close(); onSkip(item.id); },
-        });
-        actions.push({
-          key: 'move',
-          label: 'Move to next session',
-          color: colors.text.secondary,
-          onPress: () => { close(); onMove(item.id); },
-        });
-      }
+    } else if (!readOnly) {
+      actions.push({
+        key: 'complete',
+        label: 'Open journal',
+        color: accent,
+        onPress: () => { close(); onComplete(item.id); },
+      });
+    }
+
+    // Skip / Move / Edit only make sense for active sessions
+    if (!readOnly && !isJournal) {
+      actions.push({
+        key: 'edit',
+        label: 'Edit details',
+        color: colors.text.secondary,
+        onPress: () => { close(); onEdit?.(item); },
+      });
+      actions.push({
+        key: 'skip',
+        label: 'Skip',
+        color: colors.text.secondary,
+        onPress: () => { close(); onSkip(item.id); },
+      });
+      actions.push({
+        key: 'move',
+        label: 'Move to next session',
+        color: colors.text.secondary,
+        onPress: () => { close(); onMove(item.id); },
+      });
     }
 
     return (

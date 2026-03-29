@@ -97,6 +97,11 @@ export default function NowScreen() {
     [sessionFilter, morning, afternoon, evening, allSessions],
   );
 
+  const completedCount = useMemo(
+    () => displayQueue.filter((i) => i.status === 'completed').length,
+    [displayQueue],
+  );
+
   const queueKey = useMemo(() => displayQueue.map((i) => i.id).join('|'), [displayQueue]);
 
   useSyncCreateDrawerPreference(null);
@@ -135,7 +140,7 @@ export default function NowScreen() {
   const handleComplete = useCallback(
     (id: string) => {
       const item = displayQueue.find((i) => i.id === id);
-      if (!item || sessionEnded) return;
+      if (!item) return;
 
       if (item.type === 'journal_morning') { openJournal('morning'); return; }
       if (item.type === 'journal_evening') { openJournal('evening'); return; }
@@ -215,7 +220,12 @@ export default function NowScreen() {
           sessionFilter={sessionFilter}
         />
 
-        <NowSessionChips value={sessionFilter} onChange={setSessionFilter} />
+        <NowSessionChips
+          value={sessionFilter}
+          onChange={setSessionFilter}
+          completedCount={completedCount}
+          totalCount={displayQueue.length}
+        />
 
         {showEmptyMain ? (
           <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.sm }}>

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { View, Text, Pressable } from 'react-native';
-import Svg, { Path, Polyline } from 'react-native-svg';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, typographyStyles, borderRadius, fontFamily, letterSpacing } from '@/lib/theme';
 import type { QueueItem } from '@/features/queue/engine/queue-builder';
 import type { Session } from '@/lib/constants';
@@ -49,27 +49,15 @@ function getAccentColor(item: QueueItem): string {
   return colors.routines.primary;
 }
 
-function getKindLabel(item: QueueItem): string {
-  if (isJournalQueueItem(item)) return 'Journal';
-  if (item.type === 'action') return 'Action';
-  return 'Routine';
+function getIconName(item: QueueItem): string {
+  if (item.type === 'journal_morning') return 'sunny-outline';
+  if (item.type === 'journal_evening') return 'moon-outline';
+  if (item.type === 'action') return item.priority === 'high' ? 'flash-outline' : 'checkmark-circle-outline';
+  return 'repeat-outline';
 }
 
-const ACCENT_BAR_W = 3;
+const ICON_BOX = 30;
 
-function CheckIcon() {
-  return (
-    <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-      <Polyline
-        points="20 6 9 17 4 12"
-        stroke={colors.text.muted}
-        strokeWidth={2.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
 
 export function NowTimeline({ items, currentSession, onPress, readOnly = false }: Props) {
   const groups = useMemo(() => groupBySession(items), [items]);
@@ -144,8 +132,8 @@ export function NowTimeline({ items, currentSession, onPress, readOnly = false }
                 const isCompleted = item.status === 'completed';
                 const isLast = idx === allItems.length - 1;
                 const typeAccent = getAccentColor(item);
-                const barColor = item.isOverdue ? colors.error : typeAccent;
-                const kind = getKindLabel(item);
+                const iconColor = item.isOverdue ? colors.error : typeAccent;
+                const iconName = getIconName(item) as any;
 
                 if (isCompleted) {
                   return (
@@ -164,23 +152,23 @@ export function NowTimeline({ items, currentSession, onPress, readOnly = false }
                           flexDirection: 'row',
                           alignItems: 'center',
                           paddingVertical: spacing.sm,
-                          paddingLeft: spacing.md,
+                          paddingLeft: spacing.sm,
                           paddingRight: spacing.md,
                           gap: spacing.sm,
                         }}
                       >
                         <View
                           style={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: 10,
+                            width: ICON_BOX,
+                            height: ICON_BOX,
+                            borderRadius: borderRadius.md,
                             backgroundColor: colors.surfaceRaised,
                             alignItems: 'center',
                             justifyContent: 'center',
                             flexShrink: 0,
                           }}
                         >
-                          <CheckIcon />
+                          <Ionicons name="checkmark-circle" size={16} color={colors.text.muted} />
                         </View>
                         <Text
                           style={[typographyStyles.title, { color: colors.text.muted, flex: 1 }]}
@@ -196,50 +184,36 @@ export function NowTimeline({ items, currentSession, onPress, readOnly = false }
                 return (
                   <View key={item.id}>
                     <Pressable
-                      disabled={readOnly}
                       onPress={() => onPress(item)}
                       style={({ pressed }) => ({
-                        opacity: readOnly ? 0.85 : pressed ? 0.7 : 1,
+                        opacity: pressed ? 0.7 : 1,
                         flexDirection: 'row',
-                        alignItems: 'stretch',
+                        alignItems: 'center',
+                        paddingVertical: spacing.sm,
+                        paddingLeft: spacing.sm,
+                        paddingRight: spacing.md,
+                        gap: spacing.sm,
                       })}
                     >
                       <View
                         style={{
-                          width: ACCENT_BAR_W,
-                          backgroundColor: barColor,
-                          borderRadius: ACCENT_BAR_W / 2,
-                          marginLeft: spacing.sm,
-                          marginVertical: spacing.sm,
-                        }}
-                      />
-                      <View
-                        style={{
-                          flex: 1,
-                          paddingVertical: spacing.sm,
-                          paddingLeft: spacing.sm,
-                          paddingRight: spacing.md,
+                          width: ICON_BOX,
+                          height: ICON_BOX,
+                          borderRadius: borderRadius.md,
+                          backgroundColor: iconColor + '1A',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
                         }}
                       >
-                        <Text
-                          style={{
-                            fontFamily: fontFamily.generalSansMedium,
-                            fontSize: 11,
-                            lineHeight: 14,
-                            letterSpacing: letterSpacing.label,
-                            color: typeAccent,
-                            marginBottom: 2,
-                          }}
-                        >
-                          {kind}
-                        </Text>
-                        <Text
-                          style={[typographyStyles.title, { color: colors.text.primary }]}
-                          numberOfLines={2}
-                        >
-                          {item.title}
-                        </Text>
+                        <Ionicons name={iconName} size={16} color={iconColor} />
                       </View>
+                      <Text
+                        style={[typographyStyles.title, { color: colors.text.primary, flex: 1 }]}
+                        numberOfLines={2}
+                      >
+                        {item.title}
+                      </Text>
                     </Pressable>
 
                     {!isLast && (

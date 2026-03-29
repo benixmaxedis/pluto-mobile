@@ -102,6 +102,11 @@ export default function TodayScreen() {
     [sessionFilter, morning, afternoon, evening, allSessions],
   );
 
+  const completedCount = useMemo(
+    () => displayQueue.filter((i) => i.status === 'completed').length,
+    [displayQueue],
+  );
+
   useSyncCreateDrawerPreference(null);
 
   const { skipped: skippedHistory, isFetched: historyFetched } =
@@ -159,7 +164,7 @@ export default function TodayScreen() {
   const handleComplete = useCallback(
     (id: string) => {
       const item = displayQueue.find((i) => i.id === id);
-      if (!item || sessionEnded) return;
+      if (!item) return;
 
       if (item.type === 'journal_morning') { openJournal('morning'); return; }
       if (item.type === 'journal_evening') { openJournal('evening'); return; }
@@ -238,7 +243,12 @@ export default function TodayScreen() {
           showBorders={showBorders}
         />
 
-        <NowSessionChips value={sessionFilter} onChange={setSessionFilter} />
+        <NowSessionChips
+          value={sessionFilter}
+          onChange={setSessionFilter}
+          completedCount={completedCount}
+          totalCount={displayQueue.length}
+        />
 
         {showEmptyMain ? (
           <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.sm }}>
