@@ -7,7 +7,7 @@ import {
   getSessionWindowLabels,
 } from '@/features/now/session-time-format';
 import type { NowSessionFilter } from '@/features/now/use-now-queues';
-import { dbgBorder, dbgTextBorder } from '@/components/now/debug-layout-borders';
+import { dbgPanelBorder, dbgPanelTextBorder } from '@/components/now/debug-layout-borders';
 
 type Props = {
   dateIso: string;
@@ -120,11 +120,11 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
     <View
       style={[
         { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, marginBottom: spacing.xs },
-        dbgBorder('#ec4899'),
+        dbgPanelBorder('#ec4899'),
       ]}
     >
       <View
-        style={[{ flexDirection: 'row', alignItems: 'stretch', gap: spacing.xs }, dbgBorder('#8b5cf6')]}
+        style={[{ flexDirection: 'row', alignItems: 'stretch', gap: spacing.xs }, dbgPanelBorder('#8b5cf6')]}
       >
         {/* Left ~50% — fixed height matches right column */}
         <View
@@ -137,7 +137,7 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
               height: DATE_PANEL_COLUMN_H,
               justifyContent: 'center',
             },
-            dbgBorder('#ef4444'),
+            dbgPanelBorder('#ef4444'),
           ]}
         >
           <Text
@@ -150,7 +150,7 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
                 color: blue,
                 marginBottom: spacing.xs,
               },
-              dbgTextBorder('#fbbf24'),
+              dbgPanelTextBorder('#fbbf24'),
             ]}
             numberOfLines={1}
           >
@@ -163,7 +163,7 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
                 maxWidth: '100%',
                 alignSelf: 'flex-start',
               },
-              dbgBorder('#34d399'),
+              dbgPanelBorder('#34d399'),
             ]}
           >
             <Text
@@ -181,7 +181,7 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
                   width: dateBlockW ? '100%' : undefined,
                   textAlign: 'center',
                 },
-                dbgTextBorder('#10b981'),
+                dbgPanelTextBorder('#10b981'),
               ]}
               numberOfLines={1}
             >
@@ -203,7 +203,7 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
                   width: dateBlockW ? '100%' : undefined,
                   textAlign: 'center',
                 },
-                dbgTextBorder('#059669'),
+                dbgPanelTextBorder('#059669'),
               ]}
               numberOfLines={1}
             >
@@ -291,17 +291,17 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
                 height: DATE_PANEL_COLUMN_H,
                 justifyContent: 'center',
               },
-              dbgBorder('#f472b6'),
+              dbgPanelBorder('#f472b6'),
             ]}
           >
             <Text
-              style={[eventMetaLabel, { marginBottom: spacing.xs }, dbgTextBorder('#fde047')]}
+              style={[eventMetaLabel, { marginBottom: spacing.xs }, dbgPanelTextBorder('#fde047')]}
             >
               Events from
             </Text>
-            <View ref={fromTimeWrapRef} collapsable={false} style={dbgBorder('#2dd4bf')}>
+            <View ref={fromTimeWrapRef} collapsable={false} style={dbgPanelBorder('#2dd4bf')}>
               <Text
-                style={[timeTextStyle, dbgTextBorder('#5eead4')]}
+                style={[timeTextStyle, dbgPanelTextBorder('#5eead4')]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
                 minimumFontScale={0.82}
@@ -318,14 +318,14 @@ export function NowDateEventsPanel({ dateIso, sessionFilter }: Props) {
                   justifyContent: 'center',
                   alignItems: 'flex-start',
                 },
-                dbgBorder('#c084fc'),
+                dbgPanelBorder('#c084fc'),
               ]}
             >
-              <Text style={[eventMetaLabel, dbgTextBorder('#fb923c')]}>to</Text>
+              <Text style={[eventMetaLabel, dbgPanelTextBorder('#fb923c')]}>to</Text>
             </View>
-            <View ref={toTimeWrapRef} collapsable={false} style={dbgBorder('#38bdf8')}>
+            <View ref={toTimeWrapRef} collapsable={false} style={dbgPanelBorder('#38bdf8')}>
               <Text
-                style={[timeTextStyle, dbgTextBorder('#7dd3fc')]}
+                style={[timeTextStyle, dbgPanelTextBorder('#7dd3fc')]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
                 minimumFontScale={0.82}
