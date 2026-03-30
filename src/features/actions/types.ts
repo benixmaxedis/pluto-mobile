@@ -29,6 +29,11 @@ export type Action = {
   syncStatus: string | null;
   syncVersion: number | null;
   deletedAt: string | null;
+  subtasks?: ActionSubtask[];
+  subtaskProgress?: {
+    completed: number;
+    total: number;
+  } | null;
 };
 
 export type ActionSubtask = {

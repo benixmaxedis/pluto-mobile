@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect } from 'react';
-import { View } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { type FormSheetRef } from './FormSheet';
-import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
+import { useForm, Controller, useFieldArray, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ActionSchema, type ActionFormData } from '@/lib/validation';
 import { useCreateAction, useUpdateAction } from '@/features/actions/hooks/useActionMutations';
@@ -13,6 +13,13 @@ type ActionFormValues = {
   scheduledSession?: 'morning' | 'afternoon' | 'evening';
   priority: 'normal' | 'high';
   isHeld: boolean;
+  subtasks: Array<{
+    id?: string;
+    title: string;
+    isCompleted?: boolean;
+    completedAt?: string | null;
+    createdAt?: string;
+  }>;
 };
 import { TextInput, Button, Chip } from '@/components/ui';
 import { FormSheet } from './FormSheet';
@@ -57,7 +64,12 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
         scheduledSession: undefined,
         priority: 'normal',
         isHeld: false,
+        subtasks: [],
       },
+    });
+    const { fields: subtaskFields, append, remove } = useFieldArray({
+      control,
+      name: 'subtasks',
     });
 
     useEffect(() => {
@@ -69,6 +81,14 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
           scheduledSession: editData.scheduledSession ?? undefined,
           priority: editData.priority ?? 'normal',
           isHeld: editData.isHeld ?? false,
+          subtasks:
+            editData.subtasks?.map((subtask) => ({
+              id: subtask.id,
+              title: subtask.title ?? '',
+              isCompleted: subtask.isCompleted ?? false,
+              completedAt: subtask.completedAt ?? null,
+              createdAt: subtask.createdAt,
+            })) ?? [],
         });
       } else {
         reset({
@@ -78,6 +98,7 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
           scheduledSession: undefined,
           priority: 'normal',
           isHeld: false,
+          subtasks: [],
         });
       }
     }, [editData, reset]);
@@ -89,9 +110,17 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
 
     const onSubmit: SubmitHandler<ActionFormValues> = useCallback(
       (data) => {
+        const subtasks = (data.subtasks ?? [])
+          .map((subtask) => ({
+            ...subtask,
+            title: subtask.title.trim(),
+          }))
+          .filter((subtask) => subtask.title.length > 0);
+        const payload = { ...data, subtasks };
+
         if (isEdit && editId) {
           updateAction.mutate(
-            { id: editId, data },
+            { id: editId, data: payload },
             {
               onSuccess: () => {
                 reset();
@@ -101,7 +130,7 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
             },
           );
         } else {
-          createAction.mutate(data, {
+          createAction.mutate(payload, {
             onSuccess: () => {
               reset();
               (ref as React.RefObject<FormSheetRef | null>).current?.dismiss();
@@ -213,6 +242,62 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
           color={colors.warning}
           onPress={() => setValue('isHeld', !isHeld, { shouldValidate: true })}
         />
+
+        {/* Subtasks */}
+        <View style={{ gap: spacing.sm }}>
+          <Text style={{ color: colors.text.secondary }}>Subtasks</Text>
+          {subtaskFields.map((field, index) => (
+            <View key={field.id} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <Controller
+                  control={control}
+                  name={`subtasks.${index}.title`}
+                  render={({ field: subtaskField }) => (
+                    <TextInput
+                      placeholder={`Subtask ${index + 1}`}
+                      value={subtaskField.value ?? ''}
+                      onChangeText={subtaskField.onChange}
+                      onBlur={subtaskField.onBlur}
+                    />
+                  )}
+                />
+              </View>
+              <Pressable
+                onPress={() => remove(index)}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove subtask ${index + 1}`}
+                hitSlop={8}
+                style={({ pressed }) => ({
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Text style={{ color: colors.text.secondary, fontSize: 18, lineHeight: 20 }}>×</Text>
+              </Pressable>
+            </View>
+          ))}
+          <Button
+            title="Add subtask"
+            variant="secondary"
+            size="md"
+            accentColor={colors.actions.primary}
+            onPress={() =>
+              append({
+                title: '',
+              })
+            }
+          />
+          {typeof errors.subtasks?.message === 'string' && (
+            <Text style={{ color: colors.error }}>{errors.subtasks.message}</Text>
+          )}
+        </View>
 
         {/* Submit */}
         <View style={{ marginTop: spacing.md }}>
