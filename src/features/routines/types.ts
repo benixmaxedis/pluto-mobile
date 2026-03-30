@@ -49,8 +49,8 @@ export type RoutineInstance = {
   deletedAt: string | null;
 };
 
-/** Pending instances for a date, including joined template title for queue UI. */
-export type RoutineInstanceWithTemplateTitle = RoutineInstance & { templateTitle: string };
+/** Pending instances for a date, including joined template title and category for queue UI. */
+export type RoutineInstanceWithTemplateTitle = RoutineInstance & { templateTitle: string; templateCategory: string };
 
 export type RoutineInstanceSubtask = {
   id: string;

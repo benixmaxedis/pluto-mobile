@@ -66,7 +66,9 @@ export default function NowScreen() {
   const { selectedDate, setSelectedDate, currentSession, setCurrentSession } = useAppStore();
   const today = todayISO();
 
-  const [sessionFilter, setSessionFilter] = useState<NowSessionFilter>(currentSession);
+  const [sessionFilter, setSessionFilter] = useState<NowSessionFilter>(
+    () => isNowSessionPast(todayISO(), Session.EVENING) ? 'all' : currentSession,
+  );
   useEffect(() => {
     if (sessionFilter !== 'all') {
       setCurrentSession(sessionFilter);
@@ -131,10 +133,9 @@ export default function NowScreen() {
 
   const handleItemPress = useCallback(
     (item: QueueItem) => {
-      if (sessionEnded) return;
       taskSheetRef.current?.present(item);
     },
-    [sessionEnded],
+    [],
   );
 
   const handleComplete = useCallback(
@@ -237,6 +238,9 @@ export default function NowScreen() {
             currentSession={currentSession}
             onPress={handleItemPress}
             readOnly={sessionEnded}
+            showFocusCard={sessionFilter === currentSession && selectedDate === today && !isNowSessionPast(today, currentSession)}
+            selectedDate={selectedDate}
+            todayDate={today}
           />
         )}
 

@@ -16,6 +16,10 @@ export interface QueueItem {
   actionKind?: 'normal' | 'chain_generated';
   /** For routine_instance items: the parent template ID (needed to open the edit form) */
   templateId?: string;
+  /** For routine_instance items: the template category (drives the icon in the timeline). */
+  routineCategory?: string;
+  /** For action items: subtask completion progress. */
+  subtaskProgress?: { total: number; completed: number };
 }
 
 /**

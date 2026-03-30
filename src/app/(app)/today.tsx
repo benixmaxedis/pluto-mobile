@@ -155,10 +155,9 @@ export default function TodayScreen() {
 
   const handleItemPress = useCallback(
     (item: QueueItem) => {
-      if (sessionEnded) return;
       taskSheetRef.current?.present(item);
     },
-    [sessionEnded],
+    [],
   );
 
   const handleComplete = useCallback(
@@ -260,6 +259,9 @@ export default function TodayScreen() {
             currentSession={currentSession}
             onPress={handleItemPress}
             readOnly={sessionEnded}
+            showFocusCard={sessionFilter === currentSession && selectedDate === today && !isNowSessionPast(today, currentSession)}
+            selectedDate={selectedDate}
+            todayDate={today}
           />
         )}
 

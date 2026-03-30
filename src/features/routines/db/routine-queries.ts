@@ -186,7 +186,8 @@ export async function getPendingInstancesByDate(date: string): Promise<RoutineIn
       `
       *,
       routine_templates (
-        title
+        title,
+        category
       )
     `,
     )
@@ -198,12 +199,11 @@ export async function getPendingInstancesByDate(date: string): Promise<RoutineIn
   const rows = camelRows((data ?? []) as Record<string, unknown>[]);
   return rows.map((row) => {
     const nested = row.routineTemplates;
-    const templateTitle =
-      nested && typeof nested === 'object' && nested !== null && 'title' in nested
-        ? String((nested as { title: unknown }).title ?? '')
-        : '';
+    const t = nested && typeof nested === 'object' && nested !== null ? (nested as Record<string, unknown>) : null;
+    const templateTitle = t && 'title' in t ? String(t.title ?? '') : '';
+    const templateCategory = t && 'category' in t ? String(t.category ?? '') : '';
     const { routineTemplates: _rt, ...rest } = row;
-    return { ...rest, templateTitle } as RoutineInstanceWithTemplateTitle;
+    return { ...rest, templateTitle, templateCategory } as RoutineInstanceWithTemplateTitle;
   });
 }
 
@@ -215,24 +215,54 @@ export async function getCompletedInstancesByDate(date: string): Promise<Routine
       `
       *,
       routine_templates (
-        title
+        title,
+        category
       )
     `,
     )
     .eq('user_id', userId)
     .is('deleted_at', null)
-    .eq('instance_date', date)
-    .eq('status', 'completed');
+    .eq('status', 'completed')
+    .gte('completed_at', `${date}T00:00:00`)
+    .lte('completed_at', `${date}T23:59:59`);
   if (error) throw error;
   const rows = camelRows((data ?? []) as Record<string, unknown>[]);
   return rows.map((row) => {
     const nested = row.routineTemplates;
-    const templateTitle =
-      nested && typeof nested === 'object' && nested !== null && 'title' in nested
-        ? String((nested as { title: unknown }).title ?? '')
-        : '';
+    const t = nested && typeof nested === 'object' && nested !== null ? (nested as Record<string, unknown>) : null;
+    const templateTitle = t && 'title' in t ? String(t.title ?? '') : '';
+    const templateCategory = t && 'category' in t ? String(t.category ?? '') : '';
     const { routineTemplates: _rt, ...rest } = row;
-    return { ...rest, templateTitle } as RoutineInstanceWithTemplateTitle;
+    return { ...rest, templateTitle, templateCategory } as RoutineInstanceWithTemplateTitle;
+  });
+}
+
+export async function getSkippedInstancesByDate(date: string): Promise<RoutineInstanceWithTemplateTitle[]> {
+  const userId = await uid();
+  const { data, error } = await getSupabase()
+    .from('routine_instances')
+    .select(
+      `
+      *,
+      routine_templates (
+        title,
+        category
+      )
+    `,
+    )
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .eq('status', 'skipped')
+    .eq('instance_date', date);
+  if (error) throw error;
+  const rows = camelRows((data ?? []) as Record<string, unknown>[]);
+  return rows.map((row) => {
+    const nested = row.routineTemplates;
+    const t = nested && typeof nested === 'object' && nested !== null ? (nested as Record<string, unknown>) : null;
+    const templateTitle = t && 'title' in t ? String(t.title ?? '') : '';
+    const templateCategory = t && 'category' in t ? String(t.category ?? '') : '';
+    const { routineTemplates: _rt, ...rest } = row;
+    return { ...rest, templateTitle, templateCategory } as RoutineInstanceWithTemplateTitle;
   });
 }
 
@@ -246,7 +276,8 @@ export async function getTerminalRoutineInstancesByDate(
       `
       *,
       routine_templates (
-        title
+        title,
+        category
       )
     `,
     )

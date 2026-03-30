@@ -90,13 +90,30 @@ export async function getActionsForQueue(date: string) {
 
 export async function getCompletedActionsForDate(date: string): Promise<Action[]> {
   const userId = await uid();
+  // Filter by the date the action was actually completed, not its scheduled date
+  const startOfDay = `${date}T00:00:00`;
+  const endOfDay = `${date}T23:59:59`;
   const { data, error } = await getSupabase()
     .from('actions')
     .select('*')
     .eq('user_id', userId)
     .is('deleted_at', null)
     .eq('status', 'completed')
-    .or(`effective_date.eq.${date},scheduled_date.eq.${date}`);
+    .gte('completed_at', startOfDay)
+    .lte('completed_at', endOfDay);
+  if (error) throw error;
+  return camelRows((data ?? []) as Record<string, unknown>[]) as Action[];
+}
+
+export async function getSkippedActionsForDate(date: string): Promise<Action[]> {
+  const userId = await uid();
+  const { data, error } = await getSupabase()
+    .from('actions')
+    .select('*')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+    .eq('status', 'skipped')
+    .or(`scheduled_date.eq.${date},effective_date.eq.${date}`);
   if (error) throw error;
   return camelRows((data ?? []) as Record<string, unknown>[]) as Action[];
 }
@@ -112,6 +129,25 @@ export async function getTerminalActionsForDate(date: string): Promise<Action[]>
     .or(`scheduled_date.eq.${date},effective_date.eq.${date}`);
   if (error) throw error;
   return camelRows((data ?? []) as Record<string, unknown>[]) as Action[];
+}
+
+export async function getSubtaskCountsForActions(
+  actionIds: string[],
+): Promise<Record<string, { total: number; completed: number }>> {
+  if (actionIds.length === 0) return {};
+  const { data, error } = await getSupabase()
+    .from('action_subtasks')
+    .select('action_id, is_completed')
+    .in('action_id', actionIds);
+  if (error) throw error;
+  const result: Record<string, { total: number; completed: number }> = {};
+  for (const row of (data ?? []) as { action_id: string; is_completed: boolean }[]) {
+    const entry = result[row.action_id] ?? { total: 0, completed: 0 };
+    entry.total += 1;
+    if (row.is_completed) entry.completed += 1;
+    result[row.action_id] = entry;
+  }
+  return result;
 }
 
 export async function getSubtasksForAction(actionId: string) {

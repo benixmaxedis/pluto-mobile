@@ -38,7 +38,7 @@ export function CreateFAB({ onPress }: { onPress: () => void }) {
           justifyContent: 'center',
         }}
       >
-        <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+        <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
           <Path
             d="M12 5v14M5 12h14"
             stroke="#fff"

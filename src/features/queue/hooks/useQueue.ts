@@ -2,18 +2,23 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { useAppStore } from '@/store/app-store';
 import { buildQueue, type QueueItem } from '../engine/queue-builder';
-import { getActionsForQueue, getCompletedActionsForDate } from '@/features/actions/db/action-queries';
-import { getPendingInstancesByDate, getCompletedInstancesByDate } from '@/features/routines/db/routine-queries';
+import { getActionsForQueue, getCompletedActionsForDate, getSkippedActionsForDate, getSubtaskCountsForActions } from '@/features/actions/db/action-queries';
+import { getPendingInstancesByDate, getCompletedInstancesByDate, getSkippedInstancesByDate } from '@/features/routines/db/routine-queries';
 import type { Session } from '@/lib/constants';
 import { actionTabSession, routineTabSession } from '../session-attribution';
 
 async function fetchQueue(date: string, session: Session): Promise<QueueItem[]> {
-  const [rawActions, rawInstances, completedActions, completedInstances] = await Promise.all([
+  const [rawActions, rawInstances, completedActions, completedInstances, skippedActions, skippedInstances] = await Promise.all([
     getActionsForQueue(date),
     getPendingInstancesByDate(date),
     getCompletedActionsForDate(date),
     getCompletedInstancesByDate(date),
+    getSkippedActionsForDate(date),
+    getSkippedInstancesByDate(date),
   ]);
+
+  const allActionIds = [...rawActions, ...completedActions, ...skippedActions].map((a) => a.id);
+  const subtaskCounts = await getSubtaskCountsForActions(allActionIds);
 
   const actionItems: QueueItem[] = rawActions.map((a) => ({
     id: a.id,
@@ -27,6 +32,7 @@ async function fetchQueue(date: string, session: Session): Promise<QueueItem[]> 
     sortOrder: a.sortOrder ?? 0,
     createdAt: a.createdAt,
     actionKind: (a.actionKind ?? 'normal') as 'normal' | 'chain_generated',
+    subtaskProgress: subtaskCounts[a.id],
   }));
 
   const instanceItems: QueueItem[] = rawInstances.map((ri) => ({
@@ -41,6 +47,7 @@ async function fetchQueue(date: string, session: Session): Promise<QueueItem[]> 
     sortOrder: ri.sortOrder ?? 0,
     createdAt: ri.createdAt,
     templateId: ri.routineTemplateId,
+    routineCategory: ri.templateCategory || undefined,
   }));
 
   const pendingQueue = buildQueue(date, session, actionItems, instanceItems);
@@ -58,6 +65,7 @@ async function fetchQueue(date: string, session: Session): Promise<QueueItem[]> 
     sortOrder: a.sortOrder ?? 0,
     createdAt: a.createdAt,
     actionKind: (a.actionKind ?? 'normal') as 'normal' | 'chain_generated',
+    subtaskProgress: subtaskCounts[a.id],
   }));
 
   const completedInstanceItems: QueueItem[] = completedInstances.map((ri) => ({
@@ -71,9 +79,39 @@ async function fetchQueue(date: string, session: Session): Promise<QueueItem[]> 
     carryForwardCount: 0,
     sortOrder: ri.sortOrder ?? 0,
     createdAt: ri.createdAt,
+    routineCategory: ri.templateCategory || undefined,
   }));
 
-  return [...pendingQueue, ...completedActionItems, ...completedInstanceItems];
+  const skippedActionItems: QueueItem[] = skippedActions.map((a) => ({
+    id: a.id,
+    type: 'action' as const,
+    title: a.title,
+    session: actionTabSession(a),
+    priority: (a.priority ?? 'normal') as 'normal' | 'high',
+    status: 'skipped',
+    isOverdue: false,
+    carryForwardCount: a.carryForwardCount ?? 0,
+    sortOrder: a.sortOrder ?? 0,
+    createdAt: a.createdAt,
+    actionKind: (a.actionKind ?? 'normal') as 'normal' | 'chain_generated',
+    subtaskProgress: subtaskCounts[a.id],
+  }));
+
+  const skippedInstanceItems: QueueItem[] = skippedInstances.map((ri) => ({
+    id: ri.id,
+    type: 'routine_instance' as const,
+    title: ri.templateTitle || 'Routine',
+    session: routineTabSession(ri),
+    priority: 'normal' as const,
+    status: 'skipped',
+    isOverdue: false,
+    carryForwardCount: 0,
+    sortOrder: ri.sortOrder ?? 0,
+    createdAt: ri.createdAt,
+    routineCategory: ri.templateCategory || undefined,
+  }));
+
+  return [...pendingQueue, ...completedActionItems, ...completedInstanceItems, ...skippedActionItems, ...skippedInstanceItems];
 }
 
 export function useQueue() {

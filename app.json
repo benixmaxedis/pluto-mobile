@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pluto.app",
+      "bundleIdentifier": "com.benwales.plutoapp",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

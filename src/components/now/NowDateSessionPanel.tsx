@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, type LayoutChangeEvent } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { colors, fontFamily, letterSpacing, spacing } from '@/lib/theme';
@@ -66,6 +66,13 @@ export function NowDateSessionPanel({ dateIso, sessionFilter, showBorders = fals
   const [dayW, setDayW] = useState(0);
   const [monthW, setMonthW] = useState(0);
   const sharedW = dayW > 0 && monthW > 0 ? Math.max(dayW, monthW) : undefined;
+
+  // Reset measurements when the date changes so the stale width never truncates
+  // a day number that is wider than the previous date's measured value.
+  useEffect(() => {
+    setDayW(0);
+    setMonthW(0);
+  }, [dateIso]);
 
   const timesAreaRef = useRef<View>(null);
   const railColumnRef = useRef<View>(null);
