@@ -133,3 +133,14 @@ export function useToggleSubtask() {
     },
   });
 }
+
+export function useDeleteSubtask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => actionQueries.deleteSubtask(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
+    },
+  });
+}

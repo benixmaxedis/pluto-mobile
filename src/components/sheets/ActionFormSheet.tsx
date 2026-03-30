@@ -1,10 +1,20 @@
-import { forwardRef, useCallback, useEffect } from 'react';
-import { View } from 'react-native';
+import { forwardRef, useCallback, useEffect, useState } from 'react';
+import { View, Text, Pressable } from 'react-native';
 import { type FormSheetRef } from './FormSheet';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ActionSchema, type ActionFormData } from '@/lib/validation';
 import { useCreateAction, useUpdateAction } from '@/features/actions/hooks/useActionMutations';
+import { useActionSubtasks } from '@/features/actions/hooks/useActions';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/query-keys';
+import * as actionQueries from '@/features/actions/db/action-queries';
+import { Ionicons } from '@expo/vector-icons';
+import { TextInput, Button, Chip } from '@/components/ui';
+import { FormSheet } from './FormSheet';
+import { colors, spacing, fontSize } from '@/lib/theme';
+import { todayISO, toISODate } from '@/lib/utils/date';
+import { addDays } from 'date-fns';
 
 type ActionFormValues = {
   title: string;
@@ -14,11 +24,8 @@ type ActionFormValues = {
   priority: 'normal' | 'high';
   isHeld: boolean;
 };
-import { TextInput, Button, Chip } from '@/components/ui';
-import { FormSheet } from './FormSheet';
-import { colors, spacing } from '@/lib/theme';
-import { todayISO, toISODate } from '@/lib/utils/date';
-import { addDays } from 'date-fns';
+
+type LocalSubtask = { id?: string; title: string };
 
 const SESSIONS = ['morning', 'afternoon', 'evening'] as const;
 const PRIORITIES = ['normal', 'high'] as const;
@@ -39,7 +46,13 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
   ({ editId, editData, onDismiss }, ref) => {
     const createAction = useCreateAction();
     const updateAction = useUpdateAction();
+    const queryClient = useQueryClient();
     const isEdit = !!editId;
+
+    const [subtasks, setSubtasks] = useState<LocalSubtask[]>([]);
+    const [removedIds, setRemovedIds] = useState<string[]>([]);
+
+    const { data: existingSubtasks } = useActionSubtasks(editId ?? null);
 
     const {
       control,
@@ -80,7 +93,39 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
           isHeld: false,
         });
       }
+      setRemovedIds([]);
     }, [editData, reset]);
+
+    useEffect(() => {
+      if (existingSubtasks) {
+        setSubtasks(
+          (existingSubtasks as Array<{ id: string; title: string }>).map((st) => ({
+            id: st.id,
+            title: st.title,
+          })),
+        );
+      } else if (!editId) {
+        setSubtasks([]);
+      }
+    }, [existingSubtasks, editId]);
+
+    const addSubtask = useCallback(() => {
+      setSubtasks((prev) => [...prev, { title: '' }]);
+    }, []);
+
+    const updateSubtaskTitle = useCallback((index: number, title: string) => {
+      setSubtasks((prev) => prev.map((st, i) => (i === index ? { ...st, title } : st)));
+    }, []);
+
+    const removeSubtask = useCallback((index: number) => {
+      setSubtasks((prev) => {
+        const st = prev[index];
+        if (st.id) {
+          setRemovedIds((ids) => [...ids, st.id!]);
+        }
+        return prev.filter((_, i) => i !== index);
+      });
+    }, []);
 
     const scheduledDate = watch('scheduledDate');
     const scheduledSession = watch('scheduledSession');
@@ -88,29 +133,40 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
     const isHeld = watch('isHeld');
 
     const onSubmit: SubmitHandler<ActionFormValues> = useCallback(
-      (data) => {
+      async (data) => {
+        const nonEmptySubtasks = subtasks.filter((st) => st.title.trim());
+
         if (isEdit && editId) {
-          updateAction.mutate(
-            { id: editId, data },
-            {
-              onSuccess: () => {
-                reset();
-                (ref as React.RefObject<FormSheetRef | null>).current?.dismiss();
-                onDismiss?.();
-              },
-            },
-          );
-        } else {
-          createAction.mutate(data, {
-            onSuccess: () => {
-              reset();
-              (ref as React.RefObject<FormSheetRef | null>).current?.dismiss();
-              onDismiss?.();
-            },
+          await updateAction.mutateAsync({ id: editId, data });
+
+          await Promise.all(removedIds.map((id) => actionQueries.deleteSubtask(id)));
+
+          for (const st of nonEmptySubtasks) {
+            if (!st.id) {
+              await actionQueries.createSubtask(editId, st.title.trim());
+            }
+          }
+
+          queryClient.invalidateQueries({
+            queryKey: [...queryKeys.actions.byId(editId), 'subtasks'],
           });
+        } else {
+          const newId = await createAction.mutateAsync(data);
+
+          for (const st of nonEmptySubtasks) {
+            await actionQueries.createSubtask(newId, st.title.trim());
+          }
+
+          queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
         }
+
+        reset();
+        setSubtasks([]);
+        setRemovedIds([]);
+        (ref as React.RefObject<FormSheetRef | null>).current?.dismiss();
+        onDismiss?.();
       },
-      [isEdit, editId, createAction, updateAction, reset, ref, onDismiss],
+      [isEdit, editId, createAction, updateAction, reset, ref, onDismiss, subtasks, removedIds, queryClient],
     );
 
     return (
@@ -213,6 +269,53 @@ export const ActionFormSheet = forwardRef<FormSheetRef, ActionFormSheetProps>(
           color={colors.warning}
           onPress={() => setValue('isHeld', !isHeld, { shouldValidate: true })}
         />
+
+        {/* Subtasks */}
+        <View style={{ gap: spacing.sm }}>
+          <Text
+            style={{
+              fontSize: fontSize.sm,
+              color: colors.text.secondary,
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}
+          >
+            Subtasks
+          </Text>
+
+          {subtasks.map((st, index) => (
+            <View
+              key={index}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+            >
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  placeholder="Subtask title"
+                  value={st.title}
+                  onChangeText={(text) => updateSubtaskTitle(index, text)}
+                />
+              </View>
+              <Pressable
+                onPress={() => removeSubtask(index)}
+                hitSlop={8}
+                style={{ padding: spacing.xs }}
+              >
+                <Ionicons name="close-circle" size={22} color={colors.text.secondary} />
+              </Pressable>
+            </View>
+          ))}
+
+          <Pressable
+            onPress={addSubtask}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}
+          >
+            <Ionicons name="add-circle-outline" size={18} color={colors.actions.primary} />
+            <Text style={{ fontSize: fontSize.sm, color: colors.actions.primary }}>
+              Add subtask
+            </Text>
+          </Pressable>
+        </View>
 
         {/* Submit */}
         <View style={{ marginTop: spacing.md }}>
