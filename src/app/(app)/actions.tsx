@@ -58,6 +58,16 @@ interface ActionRow {
   isHeld: boolean | null;
   carryForwardCount: number | null;
   deletedAt: string | null;
+  subtasks?:
+    | Array<{
+        id: string;
+        title: string;
+        isCompleted: boolean | null;
+        completedAt: string | null;
+        createdAt: string;
+      }>
+    | null;
+  subtaskProgress?: { completed: number; total: number } | null;
 }
 
 function filterActionsByTab(actions: ActionRow[], tabIndex: number): ActionRow[] {
@@ -212,6 +222,7 @@ export default function ActionsScreen() {
             effectiveSession={item.effectiveSession as any}
             priority={(item.priority ?? 'normal') as 'normal' | 'high'}
             status={item.status ?? 'pending'}
+            subtaskProgress={item.subtaskProgress ?? null}
             isOverdue={isOverdue}
           />
         </Pressable>
@@ -301,6 +312,14 @@ export default function ActionsScreen() {
                 scheduledSession: editAction.scheduledSession as any,
                 priority: (editAction.priority as any) ?? 'normal',
                 isHeld: editAction.isHeld ?? false,
+                subtasks:
+                  editAction.subtasks?.map((subtask) => ({
+                    id: subtask.id,
+                    title: subtask.title,
+                    isCompleted: subtask.isCompleted ?? false,
+                    completedAt: subtask.completedAt ?? null,
+                    createdAt: subtask.createdAt,
+                  })) ?? [],
               }
             : null
         }

@@ -5,10 +5,95 @@ import { generateId } from '@/lib/utils/id';
 import { logEvent } from '@/features/activity/db/activity-queries';
 import { EventType, EntityType } from '@/lib/constants';
 import type { ActionFormData } from '@/lib/validation';
-import type { Action } from '../types';
+import type { Action, ActionSubtask } from '../types';
 
 async function uid(): Promise<string> {
   return getCurrentUserId();
+}
+
+type ActionSubtaskInput = NonNullable<ActionFormData['subtasks']>[number];
+
+function normalizeSubtasks(subtasks: ActionFormData['subtasks']): ActionSubtaskInput[] {
+  return (subtasks ?? [])
+    .map((subtask) => ({
+      ...subtask,
+      title: subtask.title.trim(),
+    }))
+    .filter((subtask) => subtask.title.length > 0);
+}
+
+async function syncSubtasksForAction(actionId: string, subtasks: ActionFormData['subtasks']) {
+  const now = new Date().toISOString();
+  const normalizedSubtasks = normalizeSubtasks(subtasks);
+
+  const { data: existingData, error: existingError } = await getSupabase()
+    .from('action_subtasks')
+    .select('*')
+    .eq('action_id', actionId);
+  if (existingError) throw existingError;
+
+  const existingRows = camelRows((existingData ?? []) as Record<string, unknown>[]) as ActionSubtask[];
+  const existingById = new Map(existingRows.map((row) => [row.id, row]));
+  const keepIds = new Set<string>();
+  const updates: Array<{ id: string; row: Record<string, unknown> }> = [];
+  const inserts: Record<string, unknown>[] = [];
+
+  normalizedSubtasks.forEach((subtask, index) => {
+    const existing = subtask.id ? existingById.get(subtask.id) : undefined;
+    if (existing) {
+      keepIds.add(existing.id);
+      const isCompleted = subtask.isCompleted ?? existing.isCompleted ?? false;
+      updates.push({
+        id: existing.id,
+        row: snakeKeys({
+          title: subtask.title,
+          sortOrder: index,
+          isCompleted,
+          completedAt: isCompleted ? (subtask.completedAt ?? existing.completedAt ?? null) : null,
+          updatedAt: now,
+        }),
+      });
+      return;
+    }
+
+    const isCompleted = subtask.isCompleted ?? false;
+    inserts.push(
+      snakeKeys({
+        id: generateId(),
+        actionId,
+        title: subtask.title,
+        isCompleted,
+        completedAt: isCompleted ? (subtask.completedAt ?? now) : null,
+        sortOrder: index,
+        createdAt: subtask.createdAt ?? now,
+        updatedAt: now,
+      }),
+    );
+  });
+
+  const idsToDelete = existingRows.filter((row) => !keepIds.has(row.id)).map((row) => row.id);
+  if (idsToDelete.length > 0) {
+    const { error } = await getSupabase()
+      .from('action_subtasks')
+      .delete()
+      .eq('action_id', actionId)
+      .in('id', idsToDelete);
+    if (error) throw error;
+  }
+
+  for (const update of updates) {
+    const { error } = await getSupabase()
+      .from('action_subtasks')
+      .update(update.row)
+      .eq('action_id', actionId)
+      .eq('id', update.id);
+    if (error) throw error;
+  }
+
+  if (inserts.length > 0) {
+    const { error } = await getSupabase().from('action_subtasks').insert(inserts);
+    if (error) throw error;
+  }
 }
 
 // ── Reads ────────────────────────────────────────────────
@@ -21,7 +106,37 @@ export async function getAllActions() {
     .eq('user_id', userId)
     .is('deleted_at', null);
   if (error) throw error;
-  return camelRows((data ?? []) as Record<string, unknown>[]) as Action[];
+  const actions = camelRows((data ?? []) as Record<string, unknown>[]) as Action[];
+  if (actions.length === 0) return actions;
+
+  const { data: subtasksData, error: subtasksError } = await getSupabase()
+    .from('action_subtasks')
+    .select('*')
+    .in(
+      'action_id',
+      actions.map((action) => action.id),
+    )
+    .order('sort_order', { ascending: true });
+  if (subtasksError) throw subtasksError;
+
+  const allSubtasks = camelRows((subtasksData ?? []) as Record<string, unknown>[]) as ActionSubtask[];
+  const subtasksByAction = new Map<string, ActionSubtask[]>();
+  allSubtasks.forEach((subtask) => {
+    const existing = subtasksByAction.get(subtask.actionId) ?? [];
+    existing.push(subtask);
+    subtasksByAction.set(subtask.actionId, existing);
+  });
+
+  return actions.map((action) => {
+    const subtasks = subtasksByAction.get(action.id) ?? [];
+    const completed = subtasks.filter((subtask) => !!subtask.isCompleted).length;
+
+    return {
+      ...action,
+      subtasks,
+      subtaskProgress: subtasks.length > 0 ? { completed, total: subtasks.length } : null,
+    };
+  });
 }
 
 export async function getActionById(id: string) {
@@ -141,6 +256,24 @@ export async function createAction(data: ActionFormData, userIdParam?: string) {
   const { error } = await getSupabase().from('actions').insert(row);
   if (error) throw error;
 
+  const subtasks = normalizeSubtasks(data.subtasks);
+  if (subtasks.length > 0) {
+    const subtaskRows = subtasks.map((subtask, index) =>
+      snakeKeys({
+        id: generateId(),
+        actionId: id,
+        title: subtask.title,
+        isCompleted: subtask.isCompleted ?? false,
+        completedAt: subtask.isCompleted ? (subtask.completedAt ?? now) : null,
+        sortOrder: index,
+        createdAt: subtask.createdAt ?? now,
+        updatedAt: now,
+      }),
+    );
+    const { error: subtaskError } = await getSupabase().from('action_subtasks').insert(subtaskRows);
+    if (subtaskError) throw subtaskError;
+  }
+
   await logEvent({
     eventType: EventType.ACTION_CREATED,
     entityType: EntityType.ACTION,
@@ -157,20 +290,25 @@ export async function updateAction(
 ) {
   await uid();
   const now = new Date().toISOString();
+  const { subtasks, ...actionData } = data;
   const merged: Record<string, unknown> = {
-    ...data,
+    ...actionData,
     updatedAt: now,
     syncStatus: 'synced',
   };
-  if (data.scheduledDate !== undefined) {
-    merged.effectiveDate = data.scheduledDate ?? null;
+  if (actionData.scheduledDate !== undefined) {
+    merged.effectiveDate = actionData.scheduledDate ?? null;
   }
-  if (data.scheduledSession !== undefined) {
-    merged.effectiveSession = data.scheduledSession ?? null;
+  if (actionData.scheduledSession !== undefined) {
+    merged.effectiveSession = actionData.scheduledSession ?? null;
   }
   const patch = snakeKeys(merged);
   const { error } = await getSupabase().from('actions').update(patch).eq('id', id);
   if (error) throw error;
+
+  if (subtasks !== undefined) {
+    await syncSubtasksForAction(id, subtasks);
+  }
 }
 
 export async function completeAction(id: string) {
