@@ -8,7 +8,9 @@ import type { Session } from '@/lib/constants';
 import { SESSION_ORDER, getSessionLabel } from '@/lib/constants/sessions';
 import { isJournalQueueItem } from '@/features/queue/journal-queue';
 import { isNowSessionPast } from '@/features/queue/engine/session-resolver';
+import { itemScheduledSessionAppearsInView } from '@/features/queue/session-attribution';
 import { useActionSubtasks } from '@/features/actions/hooks/useActions';
+import { useToggleSubtask } from '@/features/actions/hooks/useActionMutations';
 import { LinearGradient } from 'expo-linear-gradient';
 
 type Props = {
@@ -137,6 +139,7 @@ function renderSessionLabel(label: string) {
 function FocusCard({ item, onPress }: { item: QueueItem; onPress: () => void }) {
   const { data: subtasks } = useActionSubtasks(item.type === 'action' ? item.id : null);
   const hasSubtasks = subtasks && subtasks.length > 0;
+  const toggleSubtask = useToggleSubtask();
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
@@ -186,7 +189,11 @@ function FocusCard({ item, onPress }: { item: QueueItem; onPress: () => void }) 
           }}
         >
           {subtasks.map((sub) => (
-            <View key={sub.id} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Pressable
+              key={sub.id}
+              onPress={() => toggleSubtask.mutate({ id: sub.id, isCompleted: !sub.isCompleted })}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, opacity: pressed ? 0.6 : 1 })}
+            >
               {sub.isCompleted
                 ? <FontAwesome name="check-circle" size={14} color={colors.success} />
                 : <Ionicons name="ellipse-outline" size={14} color={colors.text.secondary} />
@@ -204,7 +211,7 @@ function FocusCard({ item, onPress }: { item: QueueItem; onPress: () => void }) 
               >
                 {sub.title}
               </Text>
-            </View>
+            </Pressable>
           ))}
         </View>
       )}
@@ -219,7 +226,10 @@ export function NowTimeline({ items, currentSession, onPress, readOnly = false, 
     () =>
       showFocusCard
         ? items.find(
-            (i) => i.status === 'pending' && (i.session === currentSession || i.session === null),
+            (i) =>
+              i.status === 'pending' &&
+              currentSession != null &&
+              (i.session === null || itemScheduledSessionAppearsInView(i.session, currentSession)),
           ) ?? null
         : null,
     [items, currentSession, showFocusCard],

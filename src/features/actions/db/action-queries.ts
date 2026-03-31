@@ -5,7 +5,7 @@ import { generateId } from '@/lib/utils/id';
 import { logEvent } from '@/features/activity/db/activity-queries';
 import { EventType, EntityType } from '@/lib/constants';
 import type { ActionFormData } from '@/lib/validation';
-import type { Action } from '../types';
+import type { Action, ActionSubtask } from '../types';
 
 async function uid(): Promise<string> {
   return getCurrentUserId();
@@ -150,14 +150,14 @@ export async function getSubtaskCountsForActions(
   return result;
 }
 
-export async function getSubtasksForAction(actionId: string) {
+export async function getSubtasksForAction(actionId: string): Promise<ActionSubtask[]> {
   const { data, error } = await getSupabase()
     .from('action_subtasks')
     .select('*')
     .eq('action_id', actionId)
     .order('sort_order', { ascending: true });
   if (error) throw error;
-  return camelRows((data ?? []) as Record<string, unknown>[]);
+  return camelRows((data ?? []) as Record<string, unknown>[]) as ActionSubtask[];
 }
 
 // ── Writes ───────────────────────────────────────────────
@@ -363,7 +363,7 @@ export async function softDeleteAction(id: string) {
 
 // ── Subtasks ─────────────────────────────────────────────
 
-export async function createSubtask(actionId: string, title: string) {
+export async function createSubtask(actionId: string, title: string, sortOrder = 0) {
   const id = generateId();
   const now = new Date().toISOString();
   const row = snakeKeys({
@@ -371,7 +371,7 @@ export async function createSubtask(actionId: string, title: string) {
     actionId,
     title,
     isCompleted: false,
-    sortOrder: 0,
+    sortOrder,
     createdAt: now,
     updatedAt: now,
   });

@@ -115,10 +115,11 @@ export function useCreateSubtask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ actionId, title }: { actionId: string; title: string }) =>
-      actionQueries.createSubtask(actionId, title),
+    mutationFn: ({ actionId, title, sortOrder = 0 }: { actionId: string; title: string; sortOrder?: number }) =>
+      actionQueries.createSubtask(actionId, title, sortOrder),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
+      queryClient.invalidateQueries({ queryKey: ['queue'] });
     },
   });
 }
@@ -131,6 +132,19 @@ export function useToggleSubtask() {
       actionQueries.toggleSubtask(id, isCompleted),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
+      queryClient.invalidateQueries({ queryKey: ['queue'] });
+    },
+  });
+}
+
+export function useDeleteSubtask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => actionQueries.deleteSubtask(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.actions.all });
+      queryClient.invalidateQueries({ queryKey: ['queue'] });
     },
   });
 }

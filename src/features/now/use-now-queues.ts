@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Session } from '@/lib/constants';
 import { useQueueForSession } from '@/features/queue/hooks/useQueue';
 import { mergeJournalPromptsIntoSessionQueue } from '@/features/queue/journal-queue';
+import { itemScheduledSessionAppearsInView } from '@/features/queue/session-attribution';
 import type { QueueItem } from '@/features/queue/engine/queue-builder';
 
 export type NowSessionFilter = Session | 'all';
@@ -15,7 +16,7 @@ function mergeForSession(
   hasEveningJournal: boolean,
 ): QueueItem[] {
   const all = data ?? [];
-  const filtered = all.filter((item) => item.session === session);
+  const filtered = all.filter((item) => itemScheduledSessionAppearsInView(item.session, session));
   return mergeJournalPromptsIntoSessionQueue(filtered, date, session, {
     today,
     hasMorningJournal,
@@ -47,10 +48,17 @@ export function useNowQueues(
     [qE.data, date, today, hasMorningJournal, hasEveningJournal],
   );
 
-  const allSessions = useMemo(
-    () => [...morning, ...afternoon, ...evening],
-    [morning, afternoon, evening],
-  );
+  const allSessions = useMemo(() => {
+    const merged = [...morning, ...afternoon, ...evening];
+    const seen = new Set<string>();
+    const out: QueueItem[] = [];
+    for (const item of merged) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      out.push(item);
+    }
+    return out;
+  }, [morning, afternoon, evening]);
 
   const isFetching = qM.isFetching || qA.isFetching || qE.isFetching;
 

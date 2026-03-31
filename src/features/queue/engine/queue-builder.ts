@@ -1,4 +1,5 @@
 import type { Session } from '@/lib/constants';
+import { itemScheduledSessionAppearsInView } from '@/features/queue/session-attribution';
 
 export type QueueItemType = 'action' | 'routine_instance' | 'journal_morning' | 'journal_evening';
 
@@ -27,10 +28,10 @@ export interface QueueItem {
  *
  * Priority order:
  * 1. Overdue actions (high priority first)
- * 2. High-priority actions for current session
- * 3. Chain-generated setup steps for current session
- * 4. Scheduled actions for current session
- * 5. Routine instances for current session
+ * 2. High-priority actions for the viewed session (including rolled-forward from earlier same-day sessions)
+ * 3. Chain-generated setup steps for the viewed session
+ * 4. Scheduled actions for the viewed session
+ * 5. Routine instances for the viewed session
  * 6. Optional pulled-forward items
  *
  * Chain-generated steps are elevated above normal scheduled actions
@@ -67,7 +68,8 @@ export function buildQueue(
 
 function getItemScore(item: QueueItem, currentSession: Session): number {
   const isHighPriority = item.priority === 'high';
-  const isCurrentSession = item.session === currentSession || item.session === null;
+  const isInSessionView =
+    item.session === null || itemScheduledSessionAppearsInView(item.session, currentSession);
   const isChainGenerated = item.actionKind === 'chain_generated';
 
   // 1. Overdue high-priority actions
@@ -77,16 +79,16 @@ function getItemScore(item: QueueItem, currentSession: Session): number {
   if (item.isOverdue && item.type === 'action') return 100;
 
   // 3. High-priority actions for current session
-  if (isHighPriority && isCurrentSession && item.type === 'action') return 80;
+  if (isHighPriority && isInSessionView && item.type === 'action') return 80;
 
   // 4. Chain-generated setup steps for current session
-  if (isChainGenerated && isCurrentSession && item.type === 'action') return 65;
+  if (isChainGenerated && isInSessionView && item.type === 'action') return 65;
 
   // 5. Normal-priority scheduled actions for current session
-  if (item.type === 'action' && isCurrentSession && !isChainGenerated) return 40;
+  if (item.type === 'action' && isInSessionView && !isChainGenerated) return 40;
 
   // 6. Routine instances for current session
-  if (item.type === 'routine_instance' && isCurrentSession) return 20;
+  if (item.type === 'routine_instance' && isInSessionView) return 20;
 
   // Everything else (wrong session, etc.)
   return 0;
